@@ -1,0 +1,30 @@
+evaluation/beads-skill/public-reports/t03-actual-hermes-install-probe-v1.json
+  h_12ee2b2686c122 1-15
+evaluation/beads-skill/public-reports/t03-actual-hermes-install-probe-v1.md
+  h_12ee2b2686c122 1-64
+scripts/tests/test_beads_hermes_discovery_harness.py
+  h_12ee2b2686c122 1-258
+scripts/tests/test_beads_skill_contract.py
+  h_12ee2b2686c122 22,213-214
+skills/beads/README.md
+  h_12ee2b2686c122 28-53
+skills/beads/SKILL.md
+  h_12ee2b2686c122 193-195
+skills/beads/references/sources.md
+  h_12ee2b2686c122 38-44
+skills/beads/scripts/beads_skill_contract.py
+  h_12ee2b2686c122 29
+skills/beads/scripts/hermes_discovery_harness.py
+  h_12ee2b2686c122 1-788
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b9bb5a6950fc9bce084336433eb3150028162f27",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
