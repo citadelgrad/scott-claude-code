@@ -25,8 +25,32 @@ python3 scripts/beads_skill_contract.py check .
 
 The checker is Python-standard-library only. It validates the package spine,
 frontmatter, required orchestration labels, direct-reference topology, hard and
-preferred context budgets, discovery corpus, and pinned attribution. Preferred
-budget drift is reported separately from hard contract failures.
+preferred context budgets, and pinned attribution. Preferred budget drift is
+reported separately from hard contract failures. It does not pretend to predict
+Hermes's model-mediated routing.
+
+## Verify actual Hermes discovery
+
+`scripts/hermes_discovery_harness.py` installs a hash-bound copy into a
+throwaway `HERMES_HOME`, with a separate `HOME`, and exercises the frozen Hermes
+scanner plus `skill_view` handler without a model call:
+
+```sh
+CANDIDATE_SHA=$(uv run --python 3.12 python scripts/hermes_discovery_harness.py candidate-hash .)
+uv run --python 3.12 python scripts/hermes_discovery_harness.py probe \
+  --candidate . --candidate-sha256 "$CANDIDATE_SHA" \
+  --hermes-source "$HOME/.hermes/hermes-agent" \
+  --runtime-root /private/tmp/beads-discovery-probe \
+  --default-home "$HOME/.hermes"
+```
+
+Automatic selection is an LLM decision and cannot be established by a keyword
+oracle or explicit load. The `run` subcommand accepts the custodian's complete
+72-scenario envelope, sends each undisclosed prompt through stdin (`--query-file
+-`), records only `skill_view` and committed load counts plus hashes, deletes
+every scenario home, and refuses to start without the exact authorization text
+printed by `plan`. It caps the run at 72 isolated sessions, two provider
+requests per session (144 maximum), and no paid API fallback.
 
 ## Scope
 

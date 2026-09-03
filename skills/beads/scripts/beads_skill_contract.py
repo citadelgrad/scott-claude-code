@@ -26,6 +26,7 @@ REQUIRED_FILES = (
     "LICENSE.txt",
     "references/sources.md",
     "scripts/beads_skill_contract.py",
+    "scripts/hermes_discovery_harness.py",
 )
 REQUIRED_LABELS = (
     "Scope contract:",
@@ -157,52 +158,6 @@ def _frontmatter_structure_errors(text: str) -> list[str]:
                 f"{key}"
             )
     return errors
-
-
-def discovery_decision(prompt: str, *, trusted_beads_repo: bool) -> bool:
-    """Deterministic oracle for the static positive/negative routing corpus."""
-    text = prompt.casefold()
-    explicit_beads = (
-        "beads" in text
-        or " bead " in f" {text} "
-        or " bd " in f" {text} "
-        or BEAD_ID_PATTERN.search(text) is not None
-    )
-    explicit_opt_out = any(
-        phrase in text
-        for phrase in ("do not use beads", "don't use beads", "without beads")
-    )
-    if explicit_beads and not explicit_opt_out:
-        return True
-    explicit_negative = (
-        "what time" in text
-        or "rewrite this sentence" in text
-        or "without changing" in text
-        or "without mutation" in text
-        or "without choosing a tracker" in text
-        or ("paperclip" in text and "beads" not in text and " bd " not in f" {text} ")
-        or (
-            "pas pipeline" in text and "beads" not in text and " bd " not in f" {text} "
-        )
-    )
-    if explicit_negative:
-        return False
-    durable_lifecycle = any(
-        phrase in text
-        for phrase in (
-            "next ready task",
-            "tracked issue",
-            "after compaction",
-            "durable handoff",
-            "epic children",
-            "dependency ordering",
-            "independent beads",
-        )
-    )
-    repository_mutation = any(
-        word in text for word in ("implement", "change", "create", "close", "claim")
-    )
-    return durable_lifecycle or (trusted_beads_repo and repository_mutation)
 
 
 def _validate_frontmatter(text: str) -> list[str]:

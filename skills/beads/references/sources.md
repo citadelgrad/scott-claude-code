@@ -35,6 +35,13 @@ pointed to by the `v2026.8.31` tag. Hermes supplies isolated conversation
 contexts and model-facing delegation; it does not by itself guarantee isolated
 writable filesystems or restart-surviving execution.
 
+Discovery verification additionally follows the pinned implementation in
+[`agent/prompt_builder.py`](https://github.com/NousResearch/hermes-agent/blob/21b2095d00a98b8ad7b5c60b10587619c852cdb8/agent/prompt_builder.py),
+[`model_tools.py`](https://github.com/NousResearch/hermes-agent/blob/21b2095d00a98b8ad7b5c60b10587619c852cdb8/model_tools.py), and
+[`tools/skills_tool.py`](https://github.com/NousResearch/hermes-agent/blob/21b2095d00a98b8ad7b5c60b10587619c852cdb8/tools/skills_tool.py).
+The scanner and loader are deterministic local code; choosing whether to call
+`skill_view` from task text is model-mediated and requires a model run.
+
 ## Agent Skills specification
 
 - Specification: <https://agentskills.io/specification>

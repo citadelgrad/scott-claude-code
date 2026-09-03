@@ -190,9 +190,9 @@ state, or conflicting ownership prevents closure and preserves recovery state.
 **Continuation contract:** Fresh sessions reconcile exact Beads, Git, worktree,
 and operation state before resuming; no retry from assumption or recency alone.
 
-**Mechanical-test contract:** Deterministic package checks cover metadata,
-routing restraint, labels, links, budgets, and pinned source attribution;
-runtime stages must separately test stateful guarantees they implement.
+**Mechanical-test contract:** Static package checks cover metadata, labels,
+links, budgets, and pinned attribution; the actual-Hermes harness separately
+tests model-mediated routing and runtime load events.
 ## Completion and status
 
 Completion is capability-gated. Report `completed` only when all required

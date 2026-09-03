@@ -19,6 +19,7 @@ REQUIRED_FILES = (
     "LICENSE.txt",
     "references/sources.md",
     "scripts/beads_skill_contract.py",
+    "scripts/hermes_discovery_harness.py",
 )
 
 
@@ -209,44 +210,8 @@ def test_reference_links_make_indirect_documents_reachable(
     assert not any("orphaned reference files" in error for error in errors)
 
 
-@pytest.mark.parametrize(
-    "prompt",
-    [
-        "Implement bead scc-0pu.2",
-        "Take the next ready task and claim it with bd",
-        "Resume this tracked issue after compaction",
-        "Create epic children and dependency ordering",
-        "Delegate these independent Beads in parallel",
-        "Track this human approval in Beads",
-        "Explain this Beads issue without changing it",
-    ],
-)
-def test_positive_discovery_corpus_triggers(prompt: str, contract) -> None:
-    assert contract.discovery_decision(prompt, trusted_beads_repo=False)
-
-
-@pytest.mark.parametrize(
-    "prompt",
-    [
-        "What time is it?",
-        "Explain this function without changing it",
-        "Rewrite this sentence",
-        "Brainstorm a plan without choosing a tracker",
-        "Use Paperclip in this repository",
-        "Author this PAS pipeline",
-    ],
-)
-def test_negative_discovery_corpus_remains_quiet(prompt: str, contract) -> None:
-    assert not contract.discovery_decision(prompt, trusted_beads_repo=False)
-
-
-def test_trusted_beads_repo_triggers_only_nontrivial_tracked_mutation(contract) -> None:
-    assert contract.discovery_decision(
-        "Implement this nontrivial repository change", trusted_beads_repo=True
-    )
-    assert not contract.discovery_decision(
-        "Explain this file without mutation", trusted_beads_repo=True
-    )
+def test_static_contract_does_not_claim_to_predict_hermes_routing(contract) -> None:
+    assert not hasattr(contract, "discovery_decision")
 
 
 def test_cli_reports_a_valid_portable_package() -> None:

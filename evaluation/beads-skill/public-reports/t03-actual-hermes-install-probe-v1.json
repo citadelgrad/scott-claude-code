@@ -1,0 +1,15 @@
+{
+  "automatic_routing_exercised": false,
+  "blocker": "MODEL_EXECUTION_NOT_AUTHORIZED",
+  "candidate_discovered": true,
+  "candidate_loaded": true,
+  "candidate_sha256": "1c634d17e4e44b9fa25670360d33492d774e27af2048e6480450191c2a3c1c99",
+  "default_profile_mutation_by_harness": false,
+  "default_profile_unchanged": false,
+  "default_profile_write_denied": true,
+  "hermes_commit": "21b2095d00a98b8ad7b5c60b10587619c852cdb8",
+  "installed_candidate_sha256": "1c634d17e4e44b9fa25670360d33492d774e27af2048e6480450191c2a3c1c99",
+  "load_events": 1,
+  "raw_content_retained": false,
+  "schema_version": "hermes-beads-install-probe.v1"
+}
