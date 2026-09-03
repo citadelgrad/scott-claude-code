@@ -1,0 +1,20 @@
+docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json
+  h_12ee2b2686c122 19-110
+scripts/tests/test_beads_skill_contract.py
+  h_12ee2b2686c122 267
+skills/beads/references/sources.md
+  h_12ee2b2686c122 60,65-71
+skills/beads/scripts/beads_skill_contract.py
+  h_12ee2b2686c122 20,67,153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4bf4ce37249bffa0b7dc3467e80807acdb2dba8f",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
