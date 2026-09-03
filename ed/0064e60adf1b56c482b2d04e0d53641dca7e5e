@@ -1,0 +1,14 @@
+evaluation/beads-skill/manifests/release-v1.json
+  h_12ee2b2686c122 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ed0064e60adf1b56c482b2d04e0d53641dca7e5e",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
