@@ -1,0 +1,1156 @@
+{
+  "schema_version": "beads.evaluation-release-manifest.v1",
+  "status": "release-blocked-alternative-stratum-unfrozen",
+  "required_treatments": [
+    "no_skill",
+    "upstream_skill",
+    "candidate_skill"
+  ],
+  "temporal_cutoff": "2026-09-02",
+  "corpus_sha256": "03be9aafd2e39605e7a31d82bedff9d5d24061d7b2dddb1986fa78fa26b975c6",
+  "split_hashes": {
+    "public": "03be9aafd2e39605e7a31d82bedff9d5d24061d7b2dddb1986fa78fa26b975c6",
+    "hidden": "394769a9ad916869c71732a7ce5039ad983059dbcbe560e5c9e327f8a3c29c30",
+    "sealed": "9954b44ebc3bb95478abdf0a1f9f2f33ea9a842d6f2d6fdb9e3afc7920f4c864"
+  },
+  "source_contracts": {
+    "source_baseline": {
+      "path": "docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json",
+      "sha256": "24b39b6f8e75af3b2f09becc1af2d10a59a92a2af8222e6caeec3d4eaa1681c0"
+    },
+    "corpus_design": {
+      "path": "docs/plans/2026-09-02-hermes-beads-skill/benchmark-corpus-design-v1.json",
+      "sha256": "29963dcb172bd3d7030c45eda797959a5341b9c0067c168c7340e1f2dc454734"
+    },
+    "baseline_results": {
+      "path": "docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json",
+      "sha256": "45875c97747278bd669e039ae71a1bdfca9ff8aa7da56694c5a7a3e6ff22fa44"
+    },
+    "evaluation_schema": {
+      "path": "skills/beads/schemas/evaluation-result-v1.schema.json",
+      "sha256": "2d17d349ab28ec6cdafa4f20efde56c9a6799e271e28a8721476d41e525aa49b"
+    }
+  },
+  "verifier_sha256": "bf1f9c8c780bdb4386de12c0111972a1876b89281b0e5d0919ac15279e6bd23f",
+  "budget_profiles": {
+    "R": {
+      "timeout_s": 180,
+      "iterations": 50,
+      "model_tokens": 12000,
+      "tool_calls": 20,
+      "refs": 2
+    },
+    "S": {
+      "timeout_s": 900,
+      "iterations": 160,
+      "model_tokens": 40000,
+      "tool_calls": 80,
+      "refs": 4
+    },
+    "C": {
+      "timeout_s": 600,
+      "iterations": 140,
+      "model_tokens": 32000,
+      "tool_calls": 70,
+      "refs": 3
+    },
+    "D": {
+      "timeout_s": 600,
+      "iterations": 120,
+      "model_tokens": 30000,
+      "tool_calls": 50,
+      "refs": 3
+    },
+    "W": {
+      "timeout_s": 2400,
+      "iterations": 220,
+      "model_tokens": 80000,
+      "tool_calls": 120,
+      "refs": 4,
+      "max_parallel_writers": 3,
+      "max_ready_fronts": 10,
+      "max_attempts_per_issue": 2,
+      "max_nonprogress_rounds": 2,
+      "child_max_iterations": 250,
+      "child_timeout_s": 0,
+      "child_advisory_wall_s": 900,
+      "child_advisory_tool_calls": 100,
+      "max_spawn_depth": 1,
+      "max_run_bytes": 104857600,
+      "max_worker_manifest_bytes": 65536,
+      "max_child_receipt_bytes": 2048,
+      "max_parent_diff_or_log_bytes": 4096
+    },
+    "V": {
+      "timeout_s": 1200,
+      "iterations": 180,
+      "model_tokens": 50000,
+      "tool_calls": 90,
+      "refs": 4
+    },
+    "X": {
+      "timeout_s": 1200,
+      "iterations": 180,
+      "model_tokens": 50000,
+      "tool_calls": 90,
+      "refs": 4
+    },
+    "G": {
+      "timeout_s": 600,
+      "iterations": 100,
+      "model_tokens": 24000,
+      "tool_calls": 40,
+      "refs": 3
+    },
+    "Q": {
+      "timeout_s": 600,
+      "iterations": 100,
+      "model_tokens": 24000,
+      "tool_calls": 40,
+      "refs": 3
+    },
+    "P": {
+      "timeout_s": 600,
+      "iterations": 100,
+      "model_tokens": 24000,
+      "tool_calls": 40,
+      "refs": 3
+    },
+    "E": {
+      "timeout_s": 900,
+      "iterations": 160,
+      "model_tokens": 40000,
+      "tool_calls": 80,
+      "refs": 4
+    },
+    "common": {
+      "max_final_output_bytes": 4096,
+      "treatments": [
+        "no_skill",
+        "official_upstream",
+        "candidate"
+      ],
+      "identical_within_pair": [
+        "task",
+        "prestate",
+        "model",
+        "harness",
+        "tools",
+        "budget"
+      ],
+      "routing_prompt_variants_per_release_family": 5
+    }
+  },
+  "budget_profiles_sha256": "6caa74c5ce26bb9b003807b038508757ac6cb5a9fe6505c24467fb48a3e277eb",
+  "thresholds_millionths": {
+    "trigger_recall_macro": 950000,
+    "negative_restraint_macro": 950000,
+    "procedural_compliance_macro": 900000,
+    "critical_lifecycle": 1000000,
+    "dependency_correctness": 1000000,
+    "recovery_fixtures": 1000000,
+    "routing_path_macro": 900000,
+    "deterministic_outcome_macro": 900000,
+    "wilson_lower_bound": 850000,
+    "local_gap_incremental_lift": 100000,
+    "noninferiority_margin": 20000,
+    "solo_token_regression_vs_no_skill": 200000,
+    "solo_latency_regression_vs_no_skill": 250000,
+    "solo_paid_cost_regression_vs_upstream": 250000,
+    "p95_regression": 500000,
+    "per_pair_tail_ratio": 2000000
+  },
+  "local_gap_scenario_ids": [
+    "B001",
+    "B003",
+    "B005",
+    "B007",
+    "B009",
+    "B013",
+    "B014",
+    "B015",
+    "B016",
+    "B017",
+    "B019",
+    "B021",
+    "B031",
+    "B033",
+    "B035",
+    "B036",
+    "B041",
+    "B043",
+    "B045",
+    "B046",
+    "B051",
+    "B053",
+    "B059",
+    "B063",
+    "B065",
+    "B066",
+    "B067",
+    "B071"
+  ],
+  "scenario_index": [
+    {
+      "task_id": "B001",
+      "split": "public",
+      "category": "discovery",
+      "polarity": "positive",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "TRG"
+      ]
+    },
+    {
+      "task_id": "B002",
+      "split": "hidden",
+      "category": "discovery",
+      "polarity": "negative",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B003",
+      "split": "sealed",
+      "category": "discovery",
+      "polarity": "positive",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "TRG",
+        "PFL"
+      ]
+    },
+    {
+      "task_id": "B004",
+      "split": "public",
+      "category": "discovery",
+      "polarity": "negative",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B005",
+      "split": "hidden",
+      "category": "discovery",
+      "polarity": "positive",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "TRG"
+      ]
+    },
+    {
+      "task_id": "B006",
+      "split": "sealed",
+      "category": "discovery",
+      "polarity": "negative",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B007",
+      "split": "public",
+      "category": "discovery",
+      "polarity": "positive",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "TRG"
+      ]
+    },
+    {
+      "task_id": "B008",
+      "split": "hidden",
+      "category": "discovery",
+      "polarity": "negative",
+      "budget_profile": "R",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B009",
+      "split": "sealed",
+      "category": "solo_lifecycle",
+      "polarity": "positive",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "PFL",
+        "ISS",
+        "CLM",
+        "ACC",
+        "EVR",
+        "FIN",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B010",
+      "split": "public",
+      "category": "solo_lifecycle",
+      "polarity": "negative",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "PFL",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B011",
+      "split": "hidden",
+      "category": "solo_lifecycle",
+      "polarity": "positive",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "PFL",
+        "CLM",
+        "ISS",
+        "ACC"
+      ]
+    },
+    {
+      "task_id": "B012",
+      "split": "sealed",
+      "category": "solo_lifecycle",
+      "polarity": "negative",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "ISS",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B013",
+      "split": "public",
+      "category": "solo_lifecycle",
+      "polarity": "positive",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "TRG",
+        "PFL",
+        "ISS",
+        "CLM"
+      ]
+    },
+    {
+      "task_id": "B014",
+      "split": "hidden",
+      "category": "solo_lifecycle",
+      "polarity": "negative",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "EVR",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B015",
+      "split": "sealed",
+      "category": "solo_lifecycle",
+      "polarity": "positive",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "AUT",
+        "FIN",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B016",
+      "split": "public",
+      "category": "solo_lifecycle",
+      "polarity": "negative",
+      "budget_profile": "S",
+      "coverage_tags": [
+        "AUT",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B017",
+      "split": "hidden",
+      "category": "creation",
+      "polarity": "positive",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "PFL",
+        "CRT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B018",
+      "split": "sealed",
+      "category": "creation",
+      "polarity": "negative",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B019",
+      "split": "public",
+      "category": "creation",
+      "polarity": "positive",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "CRT",
+        "EDG",
+        "RDY"
+      ]
+    },
+    {
+      "task_id": "B020",
+      "split": "hidden",
+      "category": "creation",
+      "polarity": "negative",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B021",
+      "split": "sealed",
+      "category": "creation",
+      "polarity": "positive",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "CRT",
+        "EDG",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B022",
+      "split": "public",
+      "category": "creation",
+      "polarity": "negative",
+      "budget_profile": "C",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B023",
+      "split": "hidden",
+      "category": "dag_readiness",
+      "polarity": "positive",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "EDG",
+        "RDY"
+      ]
+    },
+    {
+      "task_id": "B024",
+      "split": "sealed",
+      "category": "dag_readiness",
+      "polarity": "negative",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "DGR",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B025",
+      "split": "public",
+      "category": "dag_readiness",
+      "polarity": "positive",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "RDY",
+        "RFR"
+      ]
+    },
+    {
+      "task_id": "B026",
+      "split": "hidden",
+      "category": "dag_readiness",
+      "polarity": "negative",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "DGR",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B027",
+      "split": "sealed",
+      "category": "dag_readiness",
+      "polarity": "positive",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "RDY",
+        "BND"
+      ]
+    },
+    {
+      "task_id": "B028",
+      "split": "public",
+      "category": "dag_readiness",
+      "polarity": "negative",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "RDY",
+        "DGR"
+      ]
+    },
+    {
+      "task_id": "B029",
+      "split": "hidden",
+      "category": "dag_readiness",
+      "polarity": "positive",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "RFR",
+        "RDY"
+      ]
+    },
+    {
+      "task_id": "B030",
+      "split": "sealed",
+      "category": "dag_readiness",
+      "polarity": "negative",
+      "budget_profile": "D",
+      "coverage_tags": [
+        "RFR",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B031",
+      "split": "public",
+      "category": "swarm_ownership_isolation",
+      "polarity": "positive",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "ISO",
+        "OWN",
+        "PKT",
+        "JON",
+        "EVR",
+        "PAR",
+        "BND"
+      ]
+    },
+    {
+      "task_id": "B032",
+      "split": "hidden",
+      "category": "swarm_ownership_isolation",
+      "polarity": "negative",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B033",
+      "split": "sealed",
+      "category": "swarm_ownership_isolation",
+      "polarity": "positive",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "JON",
+        "EVR",
+        "PAR"
+      ]
+    },
+    {
+      "task_id": "B034",
+      "split": "public",
+      "category": "swarm_ownership_isolation",
+      "polarity": "negative",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B035",
+      "split": "hidden",
+      "category": "swarm_ownership_isolation",
+      "polarity": "positive",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "OWN",
+        "PKT"
+      ]
+    },
+    {
+      "task_id": "B036",
+      "split": "sealed",
+      "category": "swarm_ownership_isolation",
+      "polarity": "negative",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "REJ",
+        "OWN",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B037",
+      "split": "public",
+      "category": "swarm_ownership_isolation",
+      "polarity": "positive",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "RDY",
+        "BND",
+        "RFR"
+      ]
+    },
+    {
+      "task_id": "B038",
+      "split": "hidden",
+      "category": "swarm_ownership_isolation",
+      "polarity": "negative",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "ROT",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B039",
+      "split": "sealed",
+      "category": "swarm_ownership_isolation",
+      "polarity": "positive",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "JON",
+        "REJ",
+        "PAR",
+        "REC"
+      ]
+    },
+    {
+      "task_id": "B040",
+      "split": "public",
+      "category": "swarm_ownership_isolation",
+      "polarity": "negative",
+      "budget_profile": "W",
+      "coverage_tags": [
+        "ISO",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B041",
+      "split": "hidden",
+      "category": "verification",
+      "polarity": "positive",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "FRO",
+        "EVR",
+        "FIN"
+      ]
+    },
+    {
+      "task_id": "B042",
+      "split": "sealed",
+      "category": "verification",
+      "polarity": "negative",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "REJ",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B043",
+      "split": "public",
+      "category": "verification",
+      "polarity": "positive",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "FRO",
+        "EVR",
+        "REV"
+      ]
+    },
+    {
+      "task_id": "B044",
+      "split": "hidden",
+      "category": "verification",
+      "polarity": "negative",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "REJ",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B045",
+      "split": "sealed",
+      "category": "verification",
+      "polarity": "positive",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "FRO",
+        "EVR",
+        "REV",
+        "PAR"
+      ]
+    },
+    {
+      "task_id": "B046",
+      "split": "public",
+      "category": "verification",
+      "polarity": "negative",
+      "budget_profile": "V",
+      "coverage_tags": [
+        "EVR",
+        "REJ",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B047",
+      "split": "hidden",
+      "category": "crash_recovery",
+      "polarity": "positive",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "ISS",
+        "IDM",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B048",
+      "split": "sealed",
+      "category": "crash_recovery",
+      "polarity": "negative",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B049",
+      "split": "public",
+      "category": "crash_recovery",
+      "polarity": "positive",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "JON",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B050",
+      "split": "hidden",
+      "category": "crash_recovery",
+      "polarity": "negative",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "REJ",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B051",
+      "split": "sealed",
+      "category": "crash_recovery",
+      "polarity": "positive",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "EVR",
+        "FIN",
+        "IDM"
+      ]
+    },
+    {
+      "task_id": "B052",
+      "split": "public",
+      "category": "crash_recovery",
+      "polarity": "negative",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "IDM",
+        "REJ",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B053",
+      "split": "hidden",
+      "category": "crash_recovery",
+      "polarity": "positive",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "REC",
+        "AUT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B054",
+      "split": "sealed",
+      "category": "crash_recovery",
+      "polarity": "negative",
+      "budget_profile": "X",
+      "coverage_tags": [
+        "BND",
+        "JON",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B055",
+      "split": "public",
+      "category": "approvals_gates",
+      "polarity": "positive",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "GAT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B056",
+      "split": "hidden",
+      "category": "approvals_gates",
+      "polarity": "negative",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "GAT",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B057",
+      "split": "sealed",
+      "category": "approvals_gates",
+      "polarity": "positive",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "GAT",
+        "FIN"
+      ]
+    },
+    {
+      "task_id": "B058",
+      "split": "public",
+      "category": "approvals_gates",
+      "polarity": "negative",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "GAT",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B059",
+      "split": "hidden",
+      "category": "approvals_gates",
+      "polarity": "positive",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "AUT",
+        "GAT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B060",
+      "split": "sealed",
+      "category": "approvals_gates",
+      "polarity": "negative",
+      "budget_profile": "G",
+      "coverage_tags": [
+        "GAT",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B061",
+      "split": "public",
+      "category": "secret_output",
+      "polarity": "positive",
+      "budget_profile": "Q",
+      "coverage_tags": [
+        "SEC",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B062",
+      "split": "hidden",
+      "category": "secret_output",
+      "polarity": "negative",
+      "budget_profile": "Q",
+      "coverage_tags": [
+        "SEC",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B063",
+      "split": "sealed",
+      "category": "secret_output",
+      "polarity": "positive",
+      "budget_profile": "Q",
+      "coverage_tags": [
+        "SEC",
+        "EVR",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B064",
+      "split": "public",
+      "category": "secret_output",
+      "polarity": "negative",
+      "budget_profile": "Q",
+      "coverage_tags": [
+        "SEC",
+        "REJ",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B065",
+      "split": "hidden",
+      "category": "pas_selection",
+      "polarity": "positive",
+      "budget_profile": "P",
+      "coverage_tags": [
+        "PAS",
+        "GAT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B066",
+      "split": "sealed",
+      "category": "pas_selection",
+      "polarity": "negative",
+      "budget_profile": "P",
+      "coverage_tags": [
+        "PAS",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B067",
+      "split": "public",
+      "category": "pas_selection",
+      "polarity": "positive",
+      "budget_profile": "P",
+      "coverage_tags": [
+        "PAS",
+        "FRO",
+        "AUT",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B068",
+      "split": "hidden",
+      "category": "pas_selection",
+      "polarity": "negative",
+      "budget_profile": "P",
+      "coverage_tags": [
+        "RST",
+        "ZMU"
+      ]
+    },
+    {
+      "task_id": "B069",
+      "split": "sealed",
+      "category": "efficiency",
+      "polarity": "positive",
+      "budget_profile": "E",
+      "coverage_tags": [
+        "BND",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B070",
+      "split": "public",
+      "category": "efficiency",
+      "polarity": "negative",
+      "budget_profile": "E",
+      "coverage_tags": [
+        "BND",
+        "ZMU",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B071",
+      "split": "hidden",
+      "category": "efficiency",
+      "polarity": "positive",
+      "budget_profile": "E",
+      "coverage_tags": [
+        "BND",
+        "PKT",
+        "JON",
+        "OUT"
+      ]
+    },
+    {
+      "task_id": "B072",
+      "split": "sealed",
+      "category": "efficiency",
+      "polarity": "negative",
+      "budget_profile": "E",
+      "coverage_tags": [
+        "OUT"
+      ]
+    }
+  ],
+  "visibility": {
+    "public": "repository-visible development only",
+    "hidden": "external; evaluated agent and candidate author cannot access task/rubric/expected state",
+    "sealed": "external one-use release store; no tuning access"
+  },
+  "isolation_keys": [
+    "workspace",
+    "home",
+    "skill_registry",
+    "session_id",
+    "actor_id",
+    "run_root",
+    "cache",
+    "process_namespace"
+  ],
+  "semantic_judge": {
+    "role": "reporting-only explanation clarity",
+    "blinded": true,
+    "max_rubric_items": 8,
+    "max_output_bytes": 4096,
+    "may_override_deterministic_gate": false,
+    "unavailable_behavior": "report unavailable; deterministic scoring continues"
+  },
+  "sampling": [
+    "verify every category has both polarities",
+    "obtain at least three repeats for every hidden/sealed stochastic variant",
+    "obtain at least 60 positive and 60 negative routing observations per release-gating model/harness stratum",
+    "run leakage probe before baseline and candidate execution"
+  ],
+  "release_matrix": {
+    "scenario_ids": [
+      "B002",
+      "B003",
+      "B005",
+      "B006",
+      "B008",
+      "B009",
+      "B011",
+      "B012",
+      "B014",
+      "B015",
+      "B017",
+      "B018",
+      "B020",
+      "B021",
+      "B023",
+      "B024",
+      "B026",
+      "B027",
+      "B029",
+      "B030",
+      "B032",
+      "B033",
+      "B035",
+      "B036",
+      "B038",
+      "B039",
+      "B041",
+      "B042",
+      "B044",
+      "B045",
+      "B047",
+      "B048",
+      "B050",
+      "B051",
+      "B053",
+      "B054",
+      "B056",
+      "B057",
+      "B059",
+      "B060",
+      "B062",
+      "B063",
+      "B065",
+      "B066",
+      "B068",
+      "B069",
+      "B071",
+      "B072"
+    ],
+    "repeats": 3,
+    "routing_variants": 5,
+    "strata": {
+      "primary": {
+        "model": "gpt-5.6-sol",
+        "provider": "openai-codex",
+        "harness": "hermes-agent",
+        "harness_version": "0.21.0"
+      },
+      "alternative-unconfigured": {
+        "model": "UNCONFIGURED",
+        "provider": "UNCONFIGURED",
+        "harness": "hermes-agent",
+        "harness_version": "0.21.0"
+      }
+    },
+    "blocker": "Alternative model/provider and explicit USD cap are not authorized/frozen; no release matrix may run."
+  },
+  "efficiency_solo_scenario_ids": [
+    "B009",
+    "B010",
+    "B011",
+    "B012",
+    "B013",
+    "B014",
+    "B015",
+    "B016",
+    "B017",
+    "B018",
+    "B019",
+    "B020",
+    "B021",
+    "B022"
+  ]
+}

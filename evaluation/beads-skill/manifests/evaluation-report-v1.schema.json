@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:citadelgrad:scott-cc:beads:evaluation-report:v1",
+  "title": "Beads evaluation report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "corpus_sha256", "verifier_sha256", "source_contracts", "budget_profiles_sha256", "treatments", "excluded_runs", "local_gap", "lifts", "matrix", "strata", "pair_receipt_sha256", "semantic_judgments", "efficiency", "efficiency_tail_violations", "record_count", "report_sha256"],
+  "properties": {
+    "schema_version": {"const": "beads.evaluation-report.v1"},
+    "corpus_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "verifier_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_contracts": {"type": "object"},
+    "budget_profiles_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "treatments": {"type": "object"},
+    "excluded_runs": {"type": "object"},
+    "local_gap": {"type": "object"},
+    "lifts": {"type": "object"},
+    "matrix": {"type": "object"},
+    "strata": {"type": "object"},
+    "pair_receipt_sha256": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "uniqueItems": true},
+    "semantic_judgments": {"type": "array"},
+    "efficiency": {"type": "object"},
+    "efficiency_tail_violations": {"type": "array", "items": {"type": "string"}},
+    "record_count": {"type": "integer", "minimum": 0},
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

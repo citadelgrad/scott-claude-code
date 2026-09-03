@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:citadelgrad:scott-cc:beads:pair-receipt:v1",
+  "title": "Beads paired evaluation receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "pair_id", "left_treatment", "right_treatment", "prestate_sha256", "pair_binding_sha256", "left_input", "right_input", "left_result", "right_result", "deltas_millionths", "status", "pair_receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "beads.pair-receipt.v1"},
+    "pair_id": {"type": "string", "minLength": 1},
+    "left_treatment": {"type": "string", "minLength": 1},
+    "right_treatment": {"type": "string", "minLength": 1},
+    "prestate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pair_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "left_input": {"type": "object"},
+    "right_input": {"type": "object"},
+    "left_result": {"type": "object"},
+    "right_result": {"type": "object"},
+    "deltas_millionths": {"type": "object"},
+    "status": {"const": "valid"},
+    "pair_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
