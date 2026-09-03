@@ -57,12 +57,18 @@ verified byte-for-byte with SHA-256 before authoring:
 |---|---|
 | `source-baseline-v1.json` | `24b39b6f8e75af3b2f09becc1af2d10a59a92a2af8222e6caeec3d4eaa1681c0` |
 | `benchmark-corpus-design-v1.json` | `29963dcb172bd3d7030c45eda797959a5341b9c0067c168c7340e1f2dc454734` |
-| `baseline-results-v1.json` | `45875c97747278bd669e039ae71a1bdfca9ff8aa7da56694c5a7a3e6ff22fa44` |
+| `baseline-results-v1.json` | `a894f1f935de1bee789f8c06faee8c7574fa3b6d1157be51d8739736ffe260df` |
 
 The baseline decision was **proceed**: no-skill procedural compliance was
 `3/18`; the pinned upstream skill achieved `15/18`. These results motivate a
 candidate rather than proving candidate quality. Hidden and sealed corpus
-contents remain outside this package.
+contents remain outside this package. A deterministic post-hoc canary probe
+found no identity matches on preserved prompts, copied filesystems, tool-event
+arguments/results, or model-visible outputs. It fails closed overall because
+the 36 preserved session rows contain no system-context bytes; comprehensive
+process/network telemetry was also not captured. Candidate authoring therefore
+remains blocked on the leakage-boundary acceptance criterion despite the
+performance-only proceed decision.
 
 Sources were verified on `2026-09-03`. On source drift, preserve this immutable
 baseline, compare current authoritative documentation and live command help,

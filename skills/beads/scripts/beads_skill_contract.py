@@ -17,7 +17,7 @@ SOURCE_BASELINE_SHA256 = (
 )
 CORPUS_SHA256 = "29963dcb172bd3d7030c45eda797959a5341b9c0067c168c7340e1f2dc454734"
 BASELINE_RESULTS_SHA256 = (
-    "45875c97747278bd669e039ae71a1bdfca9ff8aa7da56694c5a7a3e6ff22fa44"
+    "a894f1f935de1bee789f8c06faee8c7574fa3b6d1157be51d8739736ffe260df"
 )
 
 REQUIRED_FILES = (
@@ -64,7 +64,7 @@ REQUIRED_SPINE_TEXT = (
 )
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[^\w\s]", re.UNICODE)
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
-BEAD_ID_PATTERN = re.compile(r"\b[a-z][a-z0-9]*-[a-z0-9]+(?:\.\d+)?\b", re.I)
+BEAD_ID_PATTERN = re.compile(r"\b[a-z][a-z0-9]*-[a-z0-9]+(?:\.\d+)?\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -150,7 +150,7 @@ def _frontmatter_structure_errors(text: str) -> list[str]:
         if re.fullmatch(
             r"(?:[-+]?\d+(?:\.\d+)?|true|false|null|~|\[.*\]|\{.*\})",
             value,
-            re.I,
+            re.IGNORECASE,
         ):
             errors.append(
                 "metadata value must be a quoted string when YAML would coerce it: "

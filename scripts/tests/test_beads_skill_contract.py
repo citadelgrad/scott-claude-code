@@ -264,7 +264,7 @@ def test_cli_reports_a_valid_portable_package() -> None:
 def test_sources_pin_the_authoritative_corrected_baseline(contract) -> None:
     sources = (SKILL_ROOT / "references" / "sources.md").read_text(encoding="utf-8")
     assert contract.BASELINE_RESULTS_SHA256 == (
-        "45875c97747278bd669e039ae71a1bdfca9ff8aa7da56694c5a7a3e6ff22fa44"
+        "a894f1f935de1bee789f8c06faee8c7574fa3b6d1157be51d8739736ffe260df"
     )
     assert "15/18" in sources
     assert "12/18" not in sources

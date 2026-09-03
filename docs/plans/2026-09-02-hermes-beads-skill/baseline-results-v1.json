@@ -16,8 +16,98 @@
     "subscription_quota_authorized": true,
     "valid_runs_consumed": 36
   },
-  "blocker": null,
-  "candidate_authoring_allowed": true,
+  "blocker": "AC-T02-003 remains unproven: preserved system-context bytes and comprehensive process/network evidence are unavailable.",
+  "posthoc_leakage_probe": {
+    "schema_version": "hermes-beads-posthoc-leakage-probe.v1",
+    "issue": "scc-0pu.1",
+    "executed": true,
+    "overall_status": "fail_closed",
+    "claim_scope": "Exact hidden/sealed canary identities were not observed on the complete preserved surfaces marked clear. This does not infer general unreadability from declarations, permissions, or absence alone.",
+    "match_semantics": "case-sensitive exact UTF-8 identity over preserved bytes and filesystem entry names",
+    "baseline_run_count": 36,
+    "canary_identity_count": 48,
+    "canary_identity_set_commitment_sha256": "b8561c40bd1439ba298c7e27101bc05bada38454e8883339e5a7c95dae39b0f5",
+    "private_evidence": {
+      "storage": "external system-state baseline harness; not repository content",
+      "report_payload_sha256": "57eabd07456dc0155fa8973699f83986b9df6c36e94f2ebc868c7137e65aa72b",
+      "report_file_sha256": "88d4967c291ef1cdfb3584ab2f5fbbdcede8181d916ec9aeb6e2c3b5d32e41f9",
+      "probe_implementation_sha256": "ffab8b80cf3abbdaae70a1c4028be0a73c612a5584a796cd1fe4431e872cd9fd",
+      "probe_tests_sha256": "785593975b42a089f0f86775210a91400d139d2f185ffa2a1f32e735a6dd4535",
+      "baseline_private_summary_sha256": "80afd4f3d9719dc2af14386f6126ecc3b904b5dbf2669df01b5cd3d0af4f08dd"
+    },
+    "surfaces": {
+      "prompts": {
+        "status": "clear",
+        "required": true,
+        "unit_count": 72,
+        "match_count": 0,
+        "evidence_sha256": "40003e9fb6343d148befa216a09a9c2502a13e713491d95a625e4e2659f1c38c"
+      },
+      "system_context": {
+        "status": "unavailable",
+        "required": true,
+        "unit_count": 0,
+        "expected_unit_count": 36,
+        "match_count": 0,
+        "evidence_sha256": null,
+        "limitation": "Preserved session rows contain no system prompt bytes; declarations or current profile reconstruction are not accepted as evidence."
+      },
+      "copied_filesystem": {
+        "status": "clear",
+        "required": true,
+        "tree_count": 78,
+        "file_count": 2680,
+        "directory_count": 1512,
+        "symlink_count": 0,
+        "scanned_unit_count": 6872,
+        "match_count": 0,
+        "inventory_set_sha256": "28cbda69a9b0b37cd41f2ca866453c13f920dd886f686bd578285817c5e1caee",
+        "evidence_sha256": "fbc1843366da6f58243fbd36cf6f10ce41f31c4d0ca71093e026c6b133686119",
+        "limitation": "Covers pristine copied templates plus preserved final fixture and wrapper trees; intermediate create-then-delete states were not captured."
+      },
+      "tool_event_arguments": {
+        "status": "clear",
+        "required": true,
+        "unit_count": 315,
+        "match_count": 0,
+        "evidence_sha256": "9d47a525c956f6c79e7e2c0e00cb6cb4a11f21bcc1d7d6a01f36b361525a5a8d"
+      },
+      "tool_event_results": {
+        "status": "clear",
+        "required": true,
+        "unit_count": 315,
+        "match_count": 0,
+        "evidence_sha256": "820fe1b6209c6b47882b3045a38c2b18809870885053a8b5a5dfe4b67ebdb1a9"
+      },
+      "model_visible_outputs": {
+        "status": "clear",
+        "required": true,
+        "unit_count": 226,
+        "match_count": 0,
+        "evidence_sha256": "fdcd459f0b348c0be2063b16fb1b53fb1b46c385a7a62e7b8d028d5292860df5"
+      },
+      "process_network_evidence": {
+        "status": "partial",
+        "required": false,
+        "unit_count": 36,
+        "match_count": 0,
+        "evidence_sha256": "cfc6ecb91fbc8ee165a3115a923ee267f80d62ccf684ce6646501f2c6287b368",
+        "limitation": "Only wrapper traces for git, bd, curl, wget, ssh, scp, and rsync were captured; no comprehensive process table, syscall, DNS, socket, or packet evidence exists."
+      }
+    },
+    "unavailable_required_surfaces": [
+      "system_context"
+    ],
+    "unproven_optional_surfaces": [
+      "process_network_evidence"
+    ],
+    "tdd": {
+      "red": "Five probe contract tests initially failed because the implementation module was absent; a later session-CWD unknown-state test failed because the helper was absent.",
+      "green": "Five probe contract tests pass in the external baseline harness.",
+      "external_harness_suite": "23 passed"
+    }
+  },
+  "candidate_authoring_allowed": false,
   "candidate_decision": {
     "decision": "proceed",
     "no_skill_procedural_compliance": {
