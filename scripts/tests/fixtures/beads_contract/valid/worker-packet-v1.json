@@ -68,7 +68,7 @@
     "required_child_timeout_seconds": 0,
     "required_commands": [],
     "required_max_spawn_depth": 1,
-    "required_orchestrator_enabled": false,
+    "required_orchestrator_enabled": true,
     "worker_outbox": "/tmp/x"
   }
 }

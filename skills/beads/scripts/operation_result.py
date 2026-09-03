@@ -22,6 +22,7 @@ import safe_output
 
 SUCCESS_VERBS = frozenset({"created", "completed", "closed", "pushed", "synced"})
 _RENDER_CODE = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
+MAX_JSON_OUTPUT_BYTES = 65536
 
 
 class OperationResultError(ValueError):
@@ -66,9 +67,29 @@ def _verify_file(
     return None if hmac.compare_digest(actual, expected) else "EVIDENCE_HASH_MISMATCH"
 
 
+def _pending_action_contradiction(value: Mapping[str, Any]) -> str | None:
+    pending_actions = value.get("pending_actions", [])
+    if (
+        isinstance(pending_actions, list)
+        and pending_actions
+        and all(isinstance(action, Mapping) for action in pending_actions)
+    ):
+        protected = any(
+            action.get("action") == "protected_harness_effect"
+            for action in pending_actions
+        )
+        expected_status = "human_action_required" if protected else "partial"
+        if value.get("status") != expected_status:
+            return "PENDING_ACTION_STATUS_MISMATCH"
+    return None
+
+
 def _semantic_contradiction(value: Mapping[str, Any]) -> str | None:
     status = value.get("status")
     events = value.get("native_events", [])
+    pending_contradiction = _pending_action_contradiction(value)
+    if pending_contradiction is not None:
+        return pending_contradiction
     if status == "success" and any(
         event.get("classification") != "success" or event.get("exit_code") != 0
         for event in events
@@ -216,6 +237,9 @@ def validate_operation_result(
 ) -> OperationResult:
     candidate = _sanitize_tree(copy.deepcopy(dict(value)), sensitive)
     _validate_stable_codes(candidate)
+    pending_contradiction = _pending_action_contradiction(candidate)
+    if pending_contradiction is not None:
+        raise OperationResultError(pending_contradiction)
     findings = schema_runtime.validate_instance(
         "operation-result-v1.schema.json", candidate
     )
@@ -292,6 +316,53 @@ def render_human(result: OperationResult) -> str:
     return text
 
 
+def result_exit_code(result: OperationResult) -> int:
+    status = result.value["status"]
+    if status == "success":
+        return 0
+    if status == "partial" and result.value.get("pending_actions"):
+        return 0
+    if status == "human_action_required":
+        return 6
+    if status == "conflict":
+        return 4
+    if status == "inconclusive":
+        return 5
+    return 1
+
+
+def cli_error_envelope(error_code: str, exit_code: int) -> dict[str, Any]:
+    if not _RENDER_CODE.fullmatch(error_code) or exit_code not in {1, 2, 3, 4, 5, 6}:
+        raise OperationResultError("INVALID_CLI_ERROR")
+    return {
+        "schema_version": "beads.cli-error.v1",
+        "status": "invalid",
+        "error_code": error_code,
+        "exit_code": exit_code,
+    }
+
+
+def encode_cli_output(result: OperationResult, *, full: bool) -> bytes:
+    value = (
+        result.value
+        if full
+        else {"status": result.value["status"], "human": render_human(result)}
+    )
+    encoded = (
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+        + b"\n"
+    )
+    if len(encoded) > MAX_JSON_OUTPUT_BYTES:
+        raise OperationResultError("RESULT_OUTPUT_LIMIT")
+    return encoded
+
+
 # Plugin-free Hermes inserts arbitrary child summaries before this module can
 # sanitize them. This is intentionally a release-blocking limitation.
 PRE_MODEL_CHILD_OUTPUT_LIMITATION = "UNPREVENTABLE_PRE_INTERCEPTION_LEAK"
@@ -325,26 +396,13 @@ def main(argv: list[str] | None = None) -> int:
             else validate_operation_result(value)
         )
         if args.command == "build":
-            data = (
-                json.dumps(
-                    result.value,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                ).encode()
-                + b"\n"
-            )
+            data = encode_cli_output(result, full=True)
             safe_output.write_new_artifact(args.output, data)
-        print(
-            json.dumps(
-                {"status": result.value["status"], "human": render_human(result)},
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-        )
-        return 0 if result.value["status"] == "success" else 1
+        print(encode_cli_output(result, full=args.json).decode("utf-8"), end="")
+        return result_exit_code(result)
     except (OSError, ValueError, TypeError, schema_runtime.JsonLoadFailure):
-        print('{"status":"invalid","error_code":"OPERATION_RESULT_INVALID"}')
+        envelope = cli_error_envelope("OPERATION_RESULT_INVALID", 2)
+        print(json.dumps(envelope, sort_keys=True, separators=(",", ":")))
         return 2
 
 

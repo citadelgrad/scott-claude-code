@@ -427,7 +427,7 @@
           "const": 1
         },
         "required_orchestrator_enabled": {
-          "const": false
+          "const": true
         },
         "worker_outbox": {
           "maxLength": 4096,

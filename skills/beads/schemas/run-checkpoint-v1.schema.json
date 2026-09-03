@@ -88,6 +88,7 @@
                   "worker_returned",
                   "packaging",
                   "packaged",
+                  "verified",
                   "invalid",
                   "unknown"
                 ]

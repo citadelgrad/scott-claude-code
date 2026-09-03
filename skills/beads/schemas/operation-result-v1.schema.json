@@ -574,7 +574,13 @@
         "recover",
         "evaluate_gate",
         "cleanup_direct",
-        "finish"
+        "finish",
+        "doctor",
+        "start_run",
+        "front",
+        "prepare_action",
+        "resolve_action",
+        "cleanup_run"
       ]
     },
     "pending_actions": {

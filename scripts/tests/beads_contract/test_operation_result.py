@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import sys
+import json
 from pathlib import Path
 
 import pytest
@@ -230,3 +231,76 @@ def test_sensitive_descriptor_must_be_canonical_and_owner_only(tmp_path: Path) -
         operation.OperationResultError, match="SENSITIVE_DESCRIPTOR_INVALID"
     ):
         operation._load_sensitive_values(descriptor)
+
+
+def test_prepared_action_status_and_exit_are_explicit(tmp_path: Path) -> None:
+    operation = _load()
+    value = _result(tmp_path)
+    action = json.loads(
+        (
+            ROOT / "scripts/tests/fixtures/beads_contract/valid/pending-action-v1.json"
+        ).read_text()
+    )
+    value.update(
+        operation="prepare_action",
+        status="partial",
+        pending_actions=[action],
+        error_code="ACTION_PENDING",
+        safe_next_action={
+            "code": "RESOLVE_ACTION",
+            "template_id": "resolve_action",
+            "field_path": "/pending_actions/0",
+            "parameters": [],
+        },
+    )
+    result = operation.validate_operation_result(value)
+    assert operation.result_exit_code(result) == 0
+
+    value["status"] = "success"
+    value["error_code"] = None
+    value["safe_next_action"] = None
+    with pytest.raises(
+        operation.OperationResultError, match="PENDING_ACTION_STATUS_MISMATCH"
+    ):
+        operation.validate_operation_result(value)
+
+    action["action"] = "protected_harness_effect"
+    action["required_receipt_variant"] = "protected_harness_effect"
+    value.update(
+        status="human_action_required",
+        error_code="HUMAN_ACTION_REQUIRED",
+        safe_next_action={
+            "code": "PERFORM_AND_RESOLVE_ACTION",
+            "template_id": "perform_and_resolve",
+            "field_path": "/pending_actions/0",
+            "parameters": [],
+        },
+    )
+    assert operation.result_exit_code(operation.OperationResult(value)) == 6
+
+
+def test_cli_error_envelope_and_full_json_cap_are_stable(tmp_path: Path) -> None:
+    operation = _load()
+    assert operation.cli_error_envelope("OPERATION_RESULT_INVALID", 2) == {
+        "schema_version": "beads.cli-error.v1",
+        "status": "invalid",
+        "error_code": "OPERATION_RESULT_INVALID",
+        "exit_code": 2,
+    }
+    result = operation.validate_operation_result(_result(tmp_path))
+    encoded = operation.encode_cli_output(result, full=True)
+    assert len(encoded) <= operation.MAX_JSON_OUTPUT_BYTES == 65536
+    assert json.loads(encoded) == result.value
+
+    oversized = _result(tmp_path)
+    oversized["warnings"] = [
+        {
+            "code": "WARN",
+            "template_id": "warning",
+            "field_path": "/",
+            "parameters": ["x" * 1000],
+        }
+        for _ in range(100)
+    ]
+    with pytest.raises(operation.OperationResultError, match="RESULT_OUTPUT_LIMIT"):
+        operation.encode_cli_output(operation.OperationResult(oversized), full=True)

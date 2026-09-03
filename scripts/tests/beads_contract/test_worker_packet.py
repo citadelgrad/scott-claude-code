@@ -82,7 +82,7 @@ def _packet(tmp_path: Path) -> dict:
             "required_child_max_iterations": 250,
             "required_child_timeout_seconds": 0,
             "required_max_spawn_depth": 1,
-            "required_orchestrator_enabled": False,
+            "required_orchestrator_enabled": True,
             "advisory_max_tool_calls": 100,
             "enforcement": {
                 "child_max_iterations": "hermes_runtime_hard_per_child",
@@ -138,12 +138,12 @@ def test_packet_rejects_hash_path_and_command_attacks(tmp_path: Path) -> None:
         validator.validate_packet(json.dumps(value).encode())
 
 
-def test_packet_requires_nested_orchestration_to_remain_disabled(
+def test_packet_requires_parent_orchestration_to_remain_enabled(
     tmp_path: Path,
 ) -> None:
     validator = _load()
     value = _packet(tmp_path)
-    value["verification"]["required_orchestrator_enabled"] = True
+    value["verification"]["required_orchestrator_enabled"] = False
 
     with pytest.raises(validator.PacketValidationError, match="PACKET_SCHEMA_INVALID"):
         validator.validate_packet(json.dumps(value).encode())

@@ -2,6 +2,54 @@
   "$id": "urn:citadelgrad:scott-cc:beads:direct-operation-request:v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "fields_sha256": {"type": "null"},
+              "issue_type": {"type": "null"},
+              "priority": {"type": "null"},
+              "title": {"type": "null"}
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "effect_type": {"const": "create"}
+        },
+        "required": ["effect_type"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "fields_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "issue_type": {
+                "enum": ["bug", "feature", "task", "epic", "chore", "decision"]
+              },
+              "priority": {
+                "maximum": 4,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "title": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "properties": {
     "authority_scope": {
       "items": {
@@ -69,6 +117,23 @@
           "pattern": "^[^\\x00]+$",
           "type": "string"
         },
+        "issue_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bug",
+                "feature",
+                "task",
+                "epic",
+                "chore",
+                "decision"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "other_issue_id": {
           "anyOf": [
             {
@@ -76,6 +141,18 @@
               "minLength": 1,
               "pattern": "^[^\\x00]+$",
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 4,
+              "minimum": 0,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -93,6 +170,19 @@
               "type": "null"
             }
           ]
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -100,7 +190,10 @@
         "other_issue_id",
         "content",
         "reason",
-        "fields_sha256"
+        "fields_sha256",
+        "title",
+        "issue_type",
+        "priority"
       ],
       "type": "object"
     },

@@ -1,18 +1,20 @@
 {
-  "__unknown__": true,
   "authority_scope": [
     "x"
   ],
-  "effect_type": "claim",
+  "effect_type": "create",
   "expected_precondition_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "immutable_intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "operation_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "payload": {
     "content": null,
-    "fields_sha256": null,
+    "fields_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "issue_id": "scc-x",
+    "issue_type": "task",
     "other_issue_id": null,
-    "reason": null
+    "priority": 1,
+    "reason": null,
+    "title": null
   },
   "request_id": "request-00000001",
   "schema_version": "beads.direct-operation-request.v1",
