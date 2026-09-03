@@ -256,7 +256,8 @@ def test_cli_requires_exact_packet_bound_command(tmp_path: Path) -> None:
     safe = _load()
     packet_factory = _packet_factory_module()
     packet = packet_factory._packet(tmp_path)
-    command = ["/usr/bin/true"]
+    sentinel = "redaction-probe-value-9876543210"
+    command = ["/usr/bin/printf", "%s", sentinel]
     packet["verification"]["required_commands"] = [command]
     packet_path = tmp_path / "packet.json"
     packet_path.write_text(json.dumps(packet))
@@ -265,6 +266,9 @@ def test_cli_requires_exact_packet_bound_command(tmp_path: Path) -> None:
         packet_path.read_bytes(), expected_packet_sha256=packet_sha
     )
     outbox = Path(packet["verification"]["worker_outbox"])
+    sensitive_values = tmp_path / "sensitive-values.json"
+    sensitive_values.write_text(json.dumps([sentinel]))
+    sensitive_values.chmod(0o600)
 
     def request(argv: list[str], name: str) -> Path:
         path = tmp_path / f"{name}.request.json"
@@ -301,11 +305,15 @@ def test_cli_requires_exact_packet_bound_command(tmp_path: Path) -> None:
                 str(packet_path),
                 "--expected-packet-sha256",
                 packet_sha,
+                "--sensitive-values-file",
+                str(sensitive_values),
             ]
         )
         == 0
     )
     assert result.is_file()
+    assert sentinel not in result.read_text()
+    assert (outbox / "allowed.stdout").read_text() == "[REDACTED]"
 
     denied_result = outbox / "denied.json"
     assert (
@@ -320,6 +328,8 @@ def test_cli_requires_exact_packet_bound_command(tmp_path: Path) -> None:
                 str(packet_path),
                 "--expected-packet-sha256",
                 packet_sha,
+                "--sensitive-values-file",
+                str(sensitive_values),
             ]
         )
         == 2

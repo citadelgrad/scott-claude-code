@@ -556,6 +556,27 @@ def _artifact_destination(path: Path, root: Path) -> Path:
     return candidate
 
 
+def _load_sensitive_values(path: Path) -> SensitiveSet:
+    if not path.is_absolute() or path.is_symlink():
+        raise SafeOutputError("SENSITIVE_DESCRIPTOR_INVALID")
+    try:
+        if path.resolve(strict=True) != path or not path.is_file():
+            raise SafeOutputError("SENSITIVE_DESCRIPTOR_INVALID")
+        metadata = path.stat(follow_symlinks=False)
+    except OSError:
+        raise SafeOutputError("SENSITIVE_DESCRIPTOR_INVALID") from None
+    if metadata.st_uid != os.getuid() or stat.S_IMODE(metadata.st_mode) & 0o077:
+        raise SafeOutputError("SENSITIVE_DESCRIPTOR_INVALID")
+    value = schema_runtime.strict_json_loads(
+        schema_runtime.read_bounded(path, 65536), max_bytes=65536
+    )
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and len(item.encode("utf-8")) >= 8 for item in value
+    ):
+        raise SafeOutputError("SENSITIVE_DESCRIPTOR_INVALID")
+    return SensitiveSet(tuple(value))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -564,10 +585,13 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--result", type=Path, required=True)
     run.add_argument("--worker-packet", type=Path, required=True)
     run.add_argument("--expected-packet-sha256", required=True)
+    run.add_argument("--sensitive-values-file", type=Path, required=True)
     sanitize = sub.add_parser("sanitize-value")
     sanitize.add_argument("--max-bytes", type=int, required=True)
+    sanitize.add_argument("--sensitive-values-file", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        sensitive = _load_sensitive_values(args.sensitive_values_file)
         if args.command == "sanitize-value":
             raw = sys.stdin.buffer.read(args.max_bytes + 1)
             if len(raw) > args.max_bytes:
@@ -577,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
             except UnicodeDecodeError as exc:
                 raise SafeOutputError("INVALID_ENCODING") from exc
             sanitized = sanitize_value(
-                text, sensitive=SensitiveSet(()), max_utf8_bytes=args.max_bytes
+                text, sensitive=sensitive, max_utf8_bytes=args.max_bytes
             )
             payload = {
                 "status": sanitized.status,
@@ -657,7 +681,7 @@ def main(argv: list[str] | None = None) -> int:
             stdout_log,
             stderr_log,
         )
-        result, _ = run_command(spec, sensitive=SensitiveSet(()))
+        result, _ = run_command(spec, sensitive=sensitive)
         payload = (
             json.dumps(
                 result_dict(result), sort_keys=True, separators=(",", ":")
