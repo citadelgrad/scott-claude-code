@@ -24,7 +24,7 @@
     },
     "baseline_results": {
       "path": "docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json",
-      "sha256": "45875c97747278bd669e039ae71a1bdfca9ff8aa7da56694c5a7a3e6ff22fa44"
+      "sha256": "a894f1f935de1bee789f8c06faee8c7574fa3b6d1157be51d8739736ffe260df"
     },
     "evaluation_schema": {
       "path": "skills/beads/schemas/evaluation-result-v1.schema.json",
