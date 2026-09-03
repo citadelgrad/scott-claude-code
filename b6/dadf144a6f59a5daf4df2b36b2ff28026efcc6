@@ -1,0 +1,26 @@
+scripts/tests/test_beads_coordinator_state.py
+  h_12ee2b2686c122 1-367
+scripts/tests/test_beads_ownership.py
+  h_12ee2b2686c122 1-213
+scripts/tests/test_beads_reconcile_run.py
+  h_12ee2b2686c122 1-162
+skills/beads/scripts/beads_coordinator.py
+  h_12ee2b2686c122 1-126
+skills/beads/scripts/beads_ownership.py
+  h_12ee2b2686c122 1-420
+skills/beads/scripts/coordinator_state.py
+  h_12ee2b2686c122 1-1413
+skills/beads/scripts/reconcile_run.py
+  h_12ee2b2686c122 1-349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b6dadf144a6f59a5daf4df2b36b2ff28026efcc6",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
