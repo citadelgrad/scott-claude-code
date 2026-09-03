@@ -1,0 +1,16 @@
+scripts/tests/beads_contract/test_safe_output.py
+  h_12ee2b2686c122 259-260,269-271,308-309,315-316,331-332
+skills/beads/scripts/safe_output.py
+  h_12ee2b2686c122 559-579,588,591,594,604,684
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5b0441e1707075642fc7ced6c3e9e9b58f8d81a2",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
