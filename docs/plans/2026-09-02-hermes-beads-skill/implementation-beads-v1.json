@@ -1,0 +1,29 @@
+{
+  "schema_version": "hermes-beads-implementation-ids.v1",
+  "epic_id": "scc-0pu",
+  "canonical_graph": "docs/plans/2026-09-02-hermes-beads-skill/implementation-dag-v1.json",
+  "ids": {
+    "epic": "scc-0pu",
+    "t02": "scc-0pu.1",
+    "t03": "scc-0pu.2",
+    "t04": "scc-0pu.3",
+    "t05": "scc-0pu.4",
+    "t06": "scc-0pu.5",
+    "t07": "scc-0pu.6",
+    "t19": "scc-0pu.7",
+    "t08": "scc-0pu.8",
+    "t09": "scc-0pu.9",
+    "t17": "scc-0pu.10",
+    "t10": "scc-0pu.11",
+    "t11": "scc-0pu.12",
+    "t12": "scc-0pu.13",
+    "t13": "scc-0pu.14",
+    "t14": "scc-0pu.15",
+    "t15": "scc-0pu.16",
+    "t16": "scc-0pu.17",
+    "t18": "scc-0pu.18",
+    "t20": "scc-0pu.19",
+    "t21": "scc-0pu.20",
+    "t22": "scc-0pu.21"
+  }
+}

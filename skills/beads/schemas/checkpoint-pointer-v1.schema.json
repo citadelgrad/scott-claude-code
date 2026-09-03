@@ -1,0 +1,38 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:checkpoint-pointer:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "generation": {
+      "maximum": 18446744073709551615,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "generation_path": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*//)(?!.*\\\\)[^\\x00]+$",
+      "type": "string"
+    },
+    "generation_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.checkpoint-pointer.v1"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "generation",
+    "generation_path",
+    "generation_sha256"
+  ],
+  "title": "checkpoint-pointer v1",
+  "type": "object"
+}

@@ -1,0 +1,38 @@
+{
+  "authority": {
+    "exercised": [],
+    "readback_proven": [],
+    "requested": []
+  },
+  "blockers": [],
+  "cancellation_reason": null,
+  "checkpoint": null,
+  "coverage_gaps": [],
+  "creation": null,
+  "error_code": null,
+  "errors": [],
+  "issue_ids": [],
+  "native_events": [],
+  "observed_changes": [],
+  "operation": "observe",
+  "pending_actions": [],
+  "request_id": "request-00000001",
+  "root_issue_id": null,
+  "run_id": null,
+  "safe_next_action": null,
+  "schema_version": "beads.operation-result.v1",
+  "status": "success",
+  "verification": {
+    "disposition": "not_required",
+    "evidence": [],
+    "observed_at": null,
+    "required": false,
+    "target_sha256": null
+  },
+  "warnings": [],
+  "workspace": {
+    "cli_version": "1.2.2",
+    "repository_root": "/tmp/x",
+    "workspace_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

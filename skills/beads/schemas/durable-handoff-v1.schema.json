@@ -1,0 +1,208 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:durable-handoff:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowed_effects": {
+      "additionalProperties": false,
+      "properties": {
+        "beads_mutation": {
+          "const": false
+        },
+        "dolt_remote": {
+          "const": false
+        },
+        "external_side_effects": {
+          "type": "boolean"
+        },
+        "git_remote": {
+          "const": false
+        },
+        "local_commit": {
+          "type": "boolean"
+        },
+        "repository_write": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "repository_write",
+        "local_commit",
+        "git_remote",
+        "dolt_remote",
+        "external_side_effects",
+        "beads_mutation"
+      ],
+      "type": "object"
+    },
+    "authority_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "base_commit": {
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "beads_authority": {
+      "const": "readonly"
+    },
+    "created_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "dependency_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "executor_identity": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "executor_type": {
+      "enum": [
+        "pas",
+        "external"
+      ]
+    },
+    "expires_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "handoff_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "held_ownership": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "issue_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issue_id",
+          "epoch"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "type": "array"
+    },
+    "isolation_target": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    },
+    "ready_front_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "required_result_schema": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    },
+    "resume_topology": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+    },
+    "root_issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.durable-handoff.v1"
+    },
+    "scope_issue_ids": {
+      "items": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "stages": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+    },
+    "tracker_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "unresolved_gates": {
+      "items": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "handoff_id",
+    "root_issue_id",
+    "scope_issue_ids",
+    "held_ownership",
+    "tracker_sha256",
+    "dependency_sha256",
+    "ready_front_sha256",
+    "authority_sha256",
+    "base_commit",
+    "isolation_target",
+    "unresolved_gates",
+    "stages",
+    "resume_topology",
+    "executor_type",
+    "executor_identity",
+    "beads_authority",
+    "allowed_effects",
+    "required_result_schema",
+    "created_at",
+    "expires_at"
+  ],
+  "title": "durable-handoff v1",
+  "type": "object"
+}

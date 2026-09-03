@@ -1,0 +1,139 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:lane-freeze:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_path": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    },
+    "artifact_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "attempt_id": {
+      "pattern": "^attempt-(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$",
+      "type": "string"
+    },
+    "base_sha": {
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "candidate_tree_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "inventory": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "file",
+              "symlink"
+            ]
+          },
+          "mode": {
+            "maximum": 4095,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*//)(?!.*\\\\)[^\\x00]+$",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size_bytes": {
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "mode",
+          "size_bytes",
+          "sha256",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "type": "array"
+    },
+    "issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "observed_head_sha": {
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "ownership_epoch": {
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "packaging_tool_version": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "reproduction_status": {
+      "enum": [
+        "reproduced",
+        "verified_identity",
+        "failed",
+        "inconclusive"
+      ]
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.lane-freeze.v1"
+    },
+    "transfer_mode": {
+      "enum": [
+        "commit",
+        "patch_package",
+        "external_export"
+      ]
+    },
+    "worker_result_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "issue_id",
+    "attempt_id",
+    "ownership_epoch",
+    "worker_result_sha256",
+    "transfer_mode",
+    "base_sha",
+    "observed_head_sha",
+    "artifact_path",
+    "artifact_sha256",
+    "candidate_tree_sha256",
+    "inventory",
+    "packaging_tool_version",
+    "reproduction_status"
+  ],
+  "title": "lane-freeze v1",
+  "type": "object"
+}

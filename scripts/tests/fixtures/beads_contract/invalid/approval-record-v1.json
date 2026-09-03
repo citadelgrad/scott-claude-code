@@ -1,0 +1,24 @@
+{
+  "__unknown__": true,
+  "approval_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "approver_identity": "x",
+  "authorized_operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "decision_type": "x",
+  "evidence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidence_source": "x",
+  "expires_at": null,
+  "expiry_policy": "no_expiry",
+  "granted_at": "2026-09-03T12:00:00.000000Z",
+  "issue_id": "x",
+  "one_shot": true,
+  "ownership_epoch": 0,
+  "precondition_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "provenance_class": "parent_attested",
+  "revocation_channel": "x",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.approval-record.v1",
+  "scope": [
+    "x"
+  ],
+  "target_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

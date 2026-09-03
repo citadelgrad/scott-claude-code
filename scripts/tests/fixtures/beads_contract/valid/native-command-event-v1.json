@@ -1,0 +1,11 @@
+{
+  "argv_descriptor_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "classification": "success",
+  "evidence_path": null,
+  "evidence_sha256": null,
+  "exit_code": null,
+  "profile": "x",
+  "request_id": "request-00000001",
+  "schema_version": "beads.native-command-event.v1",
+  "target_fingerprint_sha256": null
+}

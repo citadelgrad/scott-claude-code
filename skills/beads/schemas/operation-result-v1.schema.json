@@ -1,0 +1,856 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:operation-result:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "error_code": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "safe_next_action": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              "field_path": {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              "parameters": {
+                "items": {
+                  "maxLength": 4096,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "minItems": 0,
+                "type": "array"
+              },
+              "template_id": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "template_id",
+              "field_path",
+              "parameters"
+            ],
+            "type": "object"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "success"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blockers": {
+            "maxItems": 0
+          },
+          "coverage_gaps": {
+            "maxItems": 0
+          },
+          "error_code": {
+            "type": "null"
+          },
+          "errors": {
+            "maxItems": 0
+          },
+          "pending_actions": {
+            "maxItems": 0
+          },
+          "safe_next_action": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blockers": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "inconclusive"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage_gaps": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "cancelled"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cancellation_reason": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "exercised": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "readback_proven": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requested": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requested",
+        "exercised",
+        "readback_proven"
+      ],
+      "type": "object"
+    },
+    "blockers": {
+      "items": {
+        "maxLength": 4096,
+        "pattern": "^[^\\x00]*$",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    },
+    "cancellation_reason": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "checkpoint": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "coverage_gaps": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "field_path": {
+            "maxLength": 4096,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 0,
+            "type": "array"
+          },
+          "template_id": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "template_id",
+          "field_path",
+          "parameters"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    },
+    "creation": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "applied_items": {
+              "items": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "created_ids": {
+              "items": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "cycle_result": {
+              "enum": [
+                "acyclic",
+                "cycle",
+                "unknown"
+              ]
+            },
+            "dependency_edges_observed": {
+              "items": {
+                "items": {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "pattern": "^[^\\x00]+$",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "dependency_edges_requested": {
+              "items": {
+                "items": {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "pattern": "^[^\\x00]+$",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "field_comparisons_match": {
+              "type": "boolean"
+            },
+            "lint_errors": {
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "lint_warnings": {
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "readiness": {
+              "enum": [
+                "ready",
+                "blocked",
+                "unknown"
+              ]
+            },
+            "requested_ids": {
+              "items": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "unapplied_items": {
+              "items": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            }
+          },
+          "required": [
+            "requested_ids",
+            "created_ids",
+            "applied_items",
+            "unapplied_items",
+            "field_comparisons_match",
+            "dependency_edges_requested",
+            "dependency_edges_observed",
+            "lint_warnings",
+            "lint_errors",
+            "cycle_result",
+            "readiness"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "errors": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "field_path": {
+            "maxLength": 4096,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 0,
+            "type": "array"
+          },
+          "template_id": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "template_id",
+          "field_path",
+          "parameters"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    },
+    "issue_ids": {
+      "items": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "native_events": {
+      "items": {
+        "$ref": "urn:citadelgrad:scott-cc:beads:native-command-event:v1"
+      },
+      "maxItems": 1000,
+      "minItems": 0,
+      "type": "array"
+    },
+    "observed_changes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "after_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issue_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "readback_evidence_path": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "readback_evidence_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "issue_id",
+          "before_sha256",
+          "after_sha256",
+          "readback_evidence_path",
+          "readback_evidence_sha256",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "maxItems": 1000,
+      "minItems": 0,
+      "type": "array"
+    },
+    "operation": {
+      "enum": [
+        "observe",
+        "execute_one",
+        "create_issue",
+        "create_graph",
+        "edit_dependencies",
+        "execute_set",
+        "recover",
+        "evaluate_gate",
+        "cleanup_direct",
+        "finish"
+      ]
+    },
+    "pending_actions": {
+      "items": {
+        "$ref": "urn:citadelgrad:scott-cc:beads:pending-action:v1"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    },
+    "request_id": {
+      "pattern": "^[\\x20-\\x7e]{16,128}$",
+      "type": "string"
+    },
+    "root_issue_id": {
+      "anyOf": [
+        {
+          "maxLength": 1024,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "safe_next_action": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            "field_path": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "parameters": {
+              "items": {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              "maxItems": 32,
+              "minItems": 0,
+              "type": "array"
+            },
+            "template_id": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "template_id",
+            "field_path",
+            "parameters"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "schema_version": {
+      "const": "beads.operation-result.v1"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "blocked",
+        "failed",
+        "partial",
+        "inconclusive",
+        "conflict",
+        "cancelled",
+        "human_action_required"
+      ]
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "not_required",
+            "passed",
+            "failed",
+            "inconclusive"
+          ]
+        },
+        "evidence": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size_bytes": {
+                "maximum": 18446744073709551615,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "path",
+              "size_bytes",
+              "sha256"
+            ],
+            "type": "object"
+          },
+          "maxItems": 128,
+          "minItems": 0,
+          "type": "array"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "target_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "required",
+        "disposition",
+        "target_sha256",
+        "observed_at",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "warnings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "field_path": {
+            "maxLength": 4096,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 0,
+            "type": "array"
+          },
+          "template_id": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "template_id",
+          "field_path",
+          "parameters"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "minItems": 0,
+      "type": "array"
+    },
+    "workspace": {
+      "additionalProperties": false,
+      "properties": {
+        "cli_version": {
+          "const": "1.2.2"
+        },
+        "repository_root": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        "workspace_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_root",
+        "workspace_sha256",
+        "cli_version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "operation",
+    "status",
+    "request_id",
+    "issue_ids",
+    "root_issue_id",
+    "workspace",
+    "observed_changes",
+    "authority",
+    "native_events",
+    "verification",
+    "creation",
+    "pending_actions",
+    "blockers",
+    "warnings",
+    "coverage_gaps",
+    "errors",
+    "error_code",
+    "safe_next_action",
+    "run_id",
+    "checkpoint",
+    "cancellation_reason"
+  ],
+  "title": "operation-result v1",
+  "type": "object"
+}

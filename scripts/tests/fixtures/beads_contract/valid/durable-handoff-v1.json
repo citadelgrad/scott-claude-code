@@ -1,0 +1,42 @@
+{
+  "allowed_effects": {
+    "beads_mutation": false,
+    "dolt_remote": false,
+    "external_side_effects": false,
+    "git_remote": false,
+    "local_commit": false,
+    "repository_write": false
+  },
+  "authority_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "base_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "beads_authority": "readonly",
+  "created_at": "2026-09-03T12:00:00.000000Z",
+  "dependency_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "executor_identity": "x",
+  "executor_type": "pas",
+  "expires_at": "2026-09-03T12:00:00.000000Z",
+  "handoff_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "held_ownership": [
+    {
+      "epoch": 0,
+      "issue_id": "scc-x"
+    }
+  ],
+  "isolation_target": "/tmp/x",
+  "ready_front_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "required_result_schema": "/tmp/x",
+  "resume_topology": [
+    "x"
+  ],
+  "root_issue_id": "scc-x",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.durable-handoff.v1",
+  "scope_issue_ids": [
+    "x"
+  ],
+  "stages": [
+    "x"
+  ],
+  "tracker_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "unresolved_gates": []
+}

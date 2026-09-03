@@ -37,7 +37,7 @@ Preview the full published inventory without installing anything:
 npx skills add citadelgrad/scott-cc --list
 ```
 
-The repository contains both core skills and skills owned by optional Claude sub-plugins, so the current inventory is larger than the 28 core skills. Interactive selection is the safest default.
+The repository contains both core skills and skills owned by optional Claude sub-plugins, so the current inventory is larger than the 30 core skills. Interactive selection is the safest default.
 
 ## Non-interactive examples
 
@@ -46,6 +46,7 @@ Install selected skills globally for both Codex and Hermes Agent:
 ```bash
 npx skills add citadelgrad/scott-cc \
   --skill acceptance-criteria \
+  --skill beads \
   --skill tdd \
   --skill verified-implementation \
   --agent codex \
@@ -54,11 +55,11 @@ npx skills add citadelgrad/scott-cc \
   --yes
 ```
 
-Install one skill into the current project for Hermes Agent:
+Install the canonical Beads skill into the current project for Hermes Agent:
 
 ```bash
 npx skills add citadelgrad/scott-cc \
-  --skill thinking-in-systems \
+  --skill beads \
   --agent hermes-agent \
   --yes
 ```
@@ -126,14 +127,14 @@ tmp_home="$(mktemp -d)"
 mkdir -p "$tmp_home/.codex" "$tmp_home/.hermes"
 HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" HERMES_HOME="$tmp_home/.hermes" \
   npx --yes skills@latest add . \
-  --skill acceptance-criteria \
+  --skill beads \
   --agent codex \
   --agent hermes-agent \
   --global \
   --yes
 
-test -f "$tmp_home/.agents/skills/acceptance-criteria/SKILL.md"
-test -f "$tmp_home/.hermes/skills/acceptance-criteria/SKILL.md"
+test -f "$tmp_home/.agents/skills/beads/SKILL.md"
+test -f "$tmp_home/.hermes/skills/beads/SKILL.md"
 rm -r -- "$tmp_home"
 ```
 

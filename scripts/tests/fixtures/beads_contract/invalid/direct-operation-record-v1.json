@@ -1,0 +1,18 @@
+{
+  "__unknown__": true,
+  "effect_type": "claim",
+  "error": null,
+  "immutable_intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "prepared_at": "2026-09-03T12:00:00.000000Z",
+  "probe_evidence_path": null,
+  "probe_evidence_sha256": null,
+  "readback_evidence_path": null,
+  "readback_evidence_sha256": null,
+  "request_id": "request-00000001",
+  "resolution": "APPLIED",
+  "resolved_at": "2026-09-03T12:00:00.000000Z",
+  "safe_next_action": null,
+  "schema_version": "beads.direct-operation-record.v1",
+  "target_identity": "scc-x"
+}

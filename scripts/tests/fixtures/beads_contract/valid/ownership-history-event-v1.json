@@ -1,0 +1,11 @@
+{
+  "epoch": 0,
+  "issue_id": "scc-x",
+  "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "previous_event_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.ownership-history-event.v1",
+  "status": "active",
+  "timestamp": "2026-09-03T12:00:00.000000Z",
+  "token_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

@@ -1,0 +1,75 @@
+{
+  "__unknown__": true,
+  "attempt_id": "attempt-001",
+  "delegation": {
+    "allowed": false,
+    "max_child_depth": 0
+  },
+  "goal": "x",
+  "issue": {
+    "acceptance_ids": [
+      "x"
+    ],
+    "id": "x",
+    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "snapshot_path": "/tmp/x",
+    "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "title": "x"
+  },
+  "prerequisites": {
+    "issue_ids": [],
+    "required_base_state": "all_closed"
+  },
+  "repository": {
+    "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "branch": "x",
+    "root": "/tmp/x",
+    "worktree": "/tmp/x"
+  },
+  "return_contract": {
+    "max_manifest_bytes": 65536,
+    "max_receipt_bytes": 2048,
+    "schema": "/tmp/x"
+  },
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.worker-packet.v1",
+  "scope": {
+    "allowed_paths": [
+      "x"
+    ],
+    "code_write": false,
+    "destructive": false,
+    "dolt_remote": false,
+    "external_io": false,
+    "external_side_effects": false,
+    "forbidden_paths": [],
+    "git_remote": false,
+    "integration_mode": "patch_package",
+    "local_commit": false,
+    "merge": false,
+    "secret_access": false,
+    "spend": false,
+    "tracker_access": "readonly",
+    "tracker_transport": "safe_bd_only"
+  },
+  "verification": {
+    "advisory_max_tool_calls": 1,
+    "advisory_wall_clock_seconds": 1,
+    "enforcement": {
+      "child_max_iterations": "hermes_runtime_hard_per_child",
+      "child_timeout": "disabled_when_zero_else_hermes_runtime_hard_per_child",
+      "packet_delegation_allowed": "worker_policy_only",
+      "spawn_depth": "coordinator_preflight",
+      "tool_calls": "parent_monitored_stop_then_reconcile",
+      "wall_clock": "parent_monitored_stop_then_reconcile"
+    },
+    "max_artifact_bytes": 1,
+    "parent_import_root": "/tmp/x",
+    "required_child_max_iterations": 1,
+    "required_child_timeout_seconds": 0,
+    "required_commands": [],
+    "required_max_spawn_depth": 1,
+    "required_orchestrator_enabled": true,
+    "worker_outbox": "/tmp/x"
+  }
+}

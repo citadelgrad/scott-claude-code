@@ -3,11 +3,12 @@
   "notGrouped": "bottom",
   "groupings": [
     {
-      "title": "Project Setup",
-      "description": "Scaffold and initialize projects with standard tooling, config, and conventions.",
+      "title": "Project Setup & Tracking",
+      "description": "Scaffold projects and coordinate durable tracked work with standard tooling and conventions.",
       "skills": [
         "init",
-        "acceptance-criteria"
+        "acceptance-criteria",
+        "beads"
       ]
     },
     {

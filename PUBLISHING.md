@@ -77,13 +77,13 @@ tmp_home="$(mktemp -d)"
 mkdir -p "$tmp_home/.codex" "$tmp_home/.hermes"
 HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" HERMES_HOME="$tmp_home/.hermes" \
   npx --yes skills@latest add . \
-  --skill acceptance-criteria \
+  --skill beads \
   --agent codex \
   --agent hermes-agent \
   --global \
   --yes
-test -f "$tmp_home/.agents/skills/acceptance-criteria/SKILL.md"
-test -f "$tmp_home/.hermes/skills/acceptance-criteria/SKILL.md"
+test -f "$tmp_home/.agents/skills/beads/SKILL.md"
+test -f "$tmp_home/.hermes/skills/beads/SKILL.md"
 rm -r -- "$tmp_home"
 ```
 
@@ -141,7 +141,7 @@ Example post:
 ```
 Just published my Claude Code setup as a plugin!
 
-8 commands + 7 agents + 29 skills + beads epic builder for productive web development
+8 commands + 7 agents + 30 skills + beads epic builder for productive web development
 
 Install with:
 /plugin install citadelgrad/scott-cc

@@ -1,0 +1,31 @@
+{
+  "__unknown__": true,
+  "attempt_id": null,
+  "authority_class": "x",
+  "effect_type": "x",
+  "expected_pre_state_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "immutable_input_path": "/tmp/x",
+  "immutable_input_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "issue_id": null,
+  "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "ownership_epoch": null,
+  "phase": "PREPARED",
+  "previous_event_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "recovery_probe": {
+    "descriptor": [
+      "x"
+    ],
+    "expected_before_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "intended_after_identity": "x",
+    "intended_after_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "kind": "request",
+    "probe_type": "tracker_state",
+    "required_authority": "x",
+    "schema_version": "beads.recovery-probe.v1",
+    "target_identity": "scc-x",
+    "timeout_seconds": 1
+  },
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.operation-journal-event.v1",
+  "timestamp": "2026-09-03T12:00:00.000000Z"
+}

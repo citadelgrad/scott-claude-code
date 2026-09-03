@@ -1,0 +1,195 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:parent-verification:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_evidence": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptance_id": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "evidence_paths": {
+            "items": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 0,
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "failed",
+              "inconclusive",
+              "not_applicable"
+            ]
+          }
+        },
+        "required": [
+          "acceptance_id",
+          "status",
+          "evidence_paths"
+        ],
+        "type": "object"
+      },
+      "maxItems": 256,
+      "minItems": 0,
+      "type": "array"
+    },
+    "attempt_id": {
+      "pattern": "^attempt-(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$",
+      "type": "string"
+    },
+    "commands": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "maxLength": 4096,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "finished_at": {
+            "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+            "type": "string"
+          },
+          "log_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+            "type": "string"
+          },
+          "log_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "started_at": {
+            "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "exit_code",
+          "started_at",
+          "finished_at",
+          "log_path",
+          "log_sha256"
+        ],
+        "type": "object"
+      },
+      "maxItems": 128,
+      "minItems": 0,
+      "type": "array"
+    },
+    "coverage_gaps": {
+      "items": {
+        "maxLength": 4096,
+        "pattern": "^[^\\x00]*$",
+        "type": "string"
+      },
+      "maxItems": 64,
+      "minItems": 0,
+      "type": "array"
+    },
+    "disposition": {
+      "enum": [
+        "accept",
+        "reject",
+        "inconclusive"
+      ]
+    },
+    "failure_classification": {
+      "anyOf": [
+        {
+          "enum": [
+            "pre_existing",
+            "introduced",
+            "environment"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "lane_freeze_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "lane_review_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_changed_paths": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*//)(?!.*\\\\)[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 4096,
+      "minItems": 0,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "ownership_epoch": {
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.parent-verification.v1"
+    },
+    "worker_result_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "attempt_id",
+    "issue_id",
+    "ownership_epoch",
+    "worker_result_sha256",
+    "lane_freeze_sha256",
+    "lane_review_sha256",
+    "observed_changed_paths",
+    "commands",
+    "acceptance_evidence",
+    "failure_classification",
+    "coverage_gaps",
+    "disposition"
+  ],
+  "title": "parent-verification v1",
+  "type": "object"
+}

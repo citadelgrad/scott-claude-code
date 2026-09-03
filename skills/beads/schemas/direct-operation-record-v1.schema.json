@@ -1,0 +1,243 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:direct-operation-record:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "resolution": {
+            "const": "APPLIED"
+          }
+        },
+        "required": [
+          "resolution"
+        ]
+      },
+      "then": {
+        "properties": {
+          "probe_evidence_path": {
+            "type": "string"
+          },
+          "probe_evidence_sha256": {
+            "type": "string"
+          },
+          "readback_evidence_path": {
+            "type": "string"
+          },
+          "readback_evidence_sha256": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "effect_type": {
+      "enum": [
+        "claim",
+        "note",
+        "close",
+        "create",
+        "dependency_add",
+        "dependency_remove"
+      ]
+    },
+    "error": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            "field_path": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "parameters": {
+              "items": {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              "maxItems": 32,
+              "minItems": 0,
+              "type": "array"
+            },
+            "template_id": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "template_id",
+            "field_path",
+            "parameters"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "immutable_intent_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "operation_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "prepared_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "probe_evidence_path": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "probe_evidence_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "readback_evidence_path": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "readback_evidence_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "request_id": {
+      "pattern": "^[\\x20-\\x7e]{16,128}$",
+      "type": "string"
+    },
+    "resolution": {
+      "enum": [
+        "APPLIED",
+        "NOT_APPLIED",
+        "CONFLICT",
+        "UNKNOWN"
+      ]
+    },
+    "resolved_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "safe_next_action": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            "field_path": {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "parameters": {
+              "items": {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              "maxItems": 32,
+              "minItems": 0,
+              "type": "array"
+            },
+            "template_id": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "template_id",
+            "field_path",
+            "parameters"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "schema_version": {
+      "const": "beads.direct-operation-record.v1"
+    },
+    "target_identity": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "operation_id",
+    "immutable_intent_sha256",
+    "effect_type",
+    "target_identity",
+    "resolution",
+    "probe_evidence_path",
+    "probe_evidence_sha256",
+    "readback_evidence_path",
+    "readback_evidence_sha256",
+    "prepared_at",
+    "resolved_at",
+    "error",
+    "safe_next_action"
+  ],
+  "title": "direct-operation-record v1",
+  "type": "object"
+}

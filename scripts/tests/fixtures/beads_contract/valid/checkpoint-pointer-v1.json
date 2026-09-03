@@ -1,0 +1,7 @@
+{
+  "generation": 1,
+  "generation_path": "x.json",
+  "generation_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.checkpoint-pointer.v1"
+}

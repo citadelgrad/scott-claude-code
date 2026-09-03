@@ -1,0 +1,22 @@
+{
+  "__unknown__": true,
+  "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "excluded_coverage": [],
+  "findings": [],
+  "implementer_ids": [],
+  "independent": false,
+  "lane_freeze_sha256": null,
+  "packet_sha256": null,
+  "review_scope": [
+    "x"
+  ],
+  "reviewer_id": "x",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.reviewer-result.v1",
+  "target_identity": "scc-x",
+  "target_kind": "worker_packet",
+  "target_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "verdict": "pass",
+  "worker_result_sha256": null
+}

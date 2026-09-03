@@ -1,0 +1,85 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:ownership-record:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acquired_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "acquisition_operation_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "actor": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "epoch": {
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "issue_key": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "lease_expires_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "renewed_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.ownership-record.v1"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "release_prepared",
+        "released",
+        "conflict",
+        "unknown"
+      ]
+    },
+    "token_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "tracker_state_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "issue_id",
+    "issue_key",
+    "actor",
+    "run_id",
+    "epoch",
+    "token_sha256",
+    "acquisition_operation_id",
+    "tracker_state_sha256",
+    "acquired_at",
+    "renewed_at",
+    "lease_expires_at",
+    "status"
+  ],
+  "title": "ownership-record v1",
+  "type": "object"
+}

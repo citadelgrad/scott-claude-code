@@ -1,0 +1,24 @@
+{
+  "__unknown__": true,
+  "binding_limits": {
+    "max_artifact_bytes": 10485760,
+    "max_descendants": 100,
+    "max_manifest_bytes": 65536,
+    "max_nonprogress_rounds": 2,
+    "max_pending_action_bytes": 16384,
+    "max_ready_fronts": 10,
+    "max_receipt_bytes": 2048,
+    "max_run_bytes": 104857600,
+    "max_worker_attempts_per_issue": 2
+  },
+  "coordinator_version": "x",
+  "created_at": "2026-09-03T12:00:00.000000Z",
+  "repository_root": "/tmp/x",
+  "request_id": "request-00000001",
+  "root_issue_id": "x",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "run_root": "/tmp/x",
+  "run_secret_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "schema_version": "beads.run-manifest.v1",
+  "workspace": "/tmp/x"
+}

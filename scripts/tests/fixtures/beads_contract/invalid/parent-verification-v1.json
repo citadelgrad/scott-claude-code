@@ -1,0 +1,17 @@
+{
+  "__unknown__": true,
+  "acceptance_evidence": [],
+  "attempt_id": "attempt-001",
+  "commands": [],
+  "coverage_gaps": [],
+  "disposition": "accept",
+  "failure_classification": null,
+  "issue_id": "scc-x",
+  "lane_freeze_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "lane_review_sha256": null,
+  "observed_changed_paths": [],
+  "ownership_epoch": 0,
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.parent-verification.v1",
+  "worker_result_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

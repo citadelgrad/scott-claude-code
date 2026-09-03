@@ -1,0 +1,20 @@
+{
+  "__unknown__": true,
+  "authority_scope": [
+    "x"
+  ],
+  "effect_type": "claim",
+  "expected_precondition_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "immutable_intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "operation_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "payload": {
+    "content": null,
+    "fields_sha256": null,
+    "issue_id": "scc-x",
+    "other_issue_id": null,
+    "reason": null
+  },
+  "request_id": "request-00000001",
+  "schema_version": "beads.direct-operation-request.v1",
+  "target_identity": "scc-x"
+}

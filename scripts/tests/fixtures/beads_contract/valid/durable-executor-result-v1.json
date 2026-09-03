@@ -1,0 +1,25 @@
+{
+  "artifact": {
+    "path": "/tmp/x",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 0,
+    "type": "x"
+  },
+  "beads_mutated": false,
+  "blockers": [],
+  "commands": [],
+  "executor_identity": "x",
+  "handoff_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "handoff_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "issues": [
+    {
+      "epoch": 0,
+      "issue_id": "scc-x"
+    }
+  ],
+  "residual_risks": [],
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.durable-executor-result.v1",
+  "skipped_checks": [],
+  "status": "completed"
+}

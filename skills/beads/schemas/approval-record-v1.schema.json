@@ -1,0 +1,158 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:approval-record:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "expiry_policy": {
+            "const": "expires_at"
+          }
+        },
+        "required": [
+          "expiry_policy"
+        ]
+      },
+      "then": {
+        "properties": {
+          "expires_at": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "expires_at": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "approval_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "approver_identity": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "authorized_operation_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "decision_type": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "evidence_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "evidence_source": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expiry_policy": {
+      "enum": [
+        "no_expiry",
+        "expires_at"
+      ]
+    },
+    "granted_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "one_shot": {
+      "const": true
+    },
+    "ownership_epoch": {
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "precondition_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "provenance_class": {
+      "const": "parent_attested"
+    },
+    "revocation_channel": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.approval-record.v1"
+    },
+    "scope": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+    },
+    "target_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "approval_id",
+    "run_id",
+    "issue_id",
+    "ownership_epoch",
+    "provenance_class",
+    "approver_identity",
+    "evidence_source",
+    "evidence_sha256",
+    "authorized_operation_id",
+    "decision_type",
+    "target_sha256",
+    "precondition_sha256",
+    "scope",
+    "one_shot",
+    "granted_at",
+    "expiry_policy",
+    "expires_at",
+    "revocation_channel"
+  ],
+  "title": "approval-record v1",
+  "type": "object"
+}

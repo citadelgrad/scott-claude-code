@@ -1,0 +1,23 @@
+{
+  "authority_snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "budget": {
+    "max_nonprogress_rounds": 1,
+    "max_parallel": 1,
+    "max_ready_fronts": 1,
+    "max_worker_attempts_per_issue": 1
+  },
+  "coordinator_session_id": null,
+  "created_at": "2026-09-03T12:00:00.000000Z",
+  "generation": 1,
+  "issue_snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "issues": {},
+  "operation_journal_path": "/tmp/x",
+  "phase": "x",
+  "previous_checkpoint_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "ready_front_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "repository_root": "/tmp/x",
+  "root_issue_id": "scc-x",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.run-checkpoint.v1",
+  "workspace": "/tmp/x"
+}

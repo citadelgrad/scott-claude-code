@@ -8,6 +8,7 @@ Git history was used to verify repository authorship, but commit authorship alon
 
 - `skills/acceptance-criteria/SKILL.md`
 - `skills/adversarial-reviewer/SKILL.md`
+- `skills/beads/SKILL.md`
 - `skills/c4-diagram/SKILL.md`
 - `skills/cli-design/SKILL.md`
 - `skills/concurrency-atomicity/SKILL.md`
@@ -36,7 +37,7 @@ Git history was used to verify repository authorship, but commit authorship alon
 - `skills/writing-about-engineering/SKILL.md`
 - `skills/writing-skills-excellence/SKILL.md`
 
-The inline `source` and `sources` metadata in skills such as `grill-me`, `tdd`, `verified-implementation`, and `thinking-in-systems` credits the people and material Scott adapted or built upon.
+The inline `source` and `sources` metadata in skills such as `grill-me`, `tdd`, `verified-implementation`, and `thinking-in-systems` credits the people and material Scott adapted or built upon. Scott is the adaptation author of `beads`; the original Beads Contributors, `gastownhall/beads` source, pinned upstream revision, and MIT terms are retained in [`skills/beads/LICENSE.txt`](skills/beads/LICENSE.txt) and [`skills/beads/references/sources.md`](skills/beads/references/sources.md).
 
 ## Project-original plugin skills — Scott Nixon (@citadelgrad), author or substantial redesign author
 
@@ -93,4 +94,4 @@ Scott maintains these copies but is not presented as their original author. Exac
 
 ## Scope
 
-This inventory covers the 72 installable `SKILL.md` files under `skills/` and `plugins/*/skills/`. It excludes research notes such as `docs/research/LOGGING/LOGGING_SKILL.md` and tool-managed compatibility copies such as `.agents/skills/beads/SKILL.md`; those are not distributed as scott-cc-authored skills.
+This inventory covers the 73 installable `SKILL.md` files under `skills/` and `plugins/*/skills/`. It excludes research notes such as `docs/research/LOGGING/LOGGING_SKILL.md` and tool-managed compatibility copies such as `.agents/skills/beads/SKILL.md`; those are not distributed as scott-cc-authored skills.

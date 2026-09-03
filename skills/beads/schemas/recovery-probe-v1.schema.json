@@ -1,0 +1,184 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:recovery-probe:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "descriptor": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "expected_before_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "intended_after_identity": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "intended_after_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "kind": {
+          "const": "request"
+        },
+        "probe_type": {
+          "enum": [
+            "tracker_state",
+            "filesystem_identity",
+            "hermes_dispatch",
+            "worker_receipt",
+            "lane_artifact",
+            "git_ref_tree",
+            "git_remote_ref",
+            "dolt_history",
+            "approval_record",
+            "process_worktree"
+          ]
+        },
+        "required_authority": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "beads.recovery-probe.v1"
+        },
+        "target_identity": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "probe_type",
+        "target_identity",
+        "expected_before_sha256",
+        "intended_after_identity",
+        "intended_after_sha256",
+        "descriptor",
+        "timeout_seconds",
+        "required_authority"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "enum": [
+            "intended_effect_present",
+            "prestate_unchanged",
+            "conflicting_effect",
+            "insufficient_observation"
+          ]
+        },
+        "evidence_path": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        "evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "kind": {
+          "const": "result"
+        },
+        "observed_at": {
+          "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+          "type": "string"
+        },
+        "observed_identity": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_state": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "probe_type": {
+          "enum": [
+            "tracker_state",
+            "filesystem_identity",
+            "hermes_dispatch",
+            "worker_receipt",
+            "lane_artifact",
+            "git_ref_tree",
+            "git_remote_ref",
+            "dolt_history",
+            "approval_record",
+            "process_worktree"
+          ]
+        },
+        "schema_version": {
+          "const": "beads.recovery-probe.v1"
+        },
+        "target_identity": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "probe_type",
+        "target_identity",
+        "observed_identity",
+        "observed_sha256",
+        "observed_state",
+        "evidence_path",
+        "evidence_sha256",
+        "observed_at",
+        "classification"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "recovery-probe v1"
+}

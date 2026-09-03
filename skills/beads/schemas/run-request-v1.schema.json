@@ -1,0 +1,45 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:run-request:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[\\x20-\\x7e]{16,128}$",
+      "type": "string"
+    },
+    "request_key": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.run-request.v1"
+    },
+    "start_input_v1_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "allocating",
+        "active",
+        "recovery_required",
+        "conflict",
+        "terminal"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_key",
+    "request_id",
+    "start_input_v1_sha256",
+    "run_id",
+    "status"
+  ],
+  "title": "run-request v1",
+  "type": "object"
+}

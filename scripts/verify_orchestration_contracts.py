@@ -171,6 +171,10 @@ ORCHESTRATOR_CONTRACT_FIELDS = (
 
 ORCHESTRATOR_CONTRACTS = (
     OrchestratorContract(
+        "skills/beads/SKILL.md",
+        "scripts/tests/test_beads_skill_context_budget.py",
+    ),
+    OrchestratorContract(
         "plugins/mutation-testing/skills/mutation-test/SKILL.md",
         "scripts/tests/test_mutation_test_context_budget.py",
     ),

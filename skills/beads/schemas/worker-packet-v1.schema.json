@@ -1,0 +1,470 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:worker-packet:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "integration_mode": {
+                "const": "commit"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "external_io": {
+                "const": false
+              },
+              "local_commit": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "integration_mode": {
+                "const": "patch_package"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "external_io": {
+                "const": false
+              },
+              "local_commit": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "integration_mode": {
+                "const": "external_export"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "external_io": {
+                "const": true
+              },
+              "local_commit": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "attempt_id": {
+      "pattern": "^attempt-(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$",
+      "type": "string"
+    },
+    "delegation": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed": {
+          "const": false
+        },
+        "max_child_depth": {
+          "const": 0
+        }
+      },
+      "required": [
+        "allowed",
+        "max_child_depth"
+      ],
+      "type": "object"
+    },
+    "goal": {
+      "maxLength": 4096,
+      "pattern": "^[^\\x00]*$",
+      "type": "string"
+    },
+    "issue": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_ids": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "key": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "snapshot_path": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        "snapshot_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "title",
+        "snapshot_path",
+        "snapshot_sha256",
+        "acceptance_ids"
+      ],
+      "type": "object"
+    },
+    "prerequisites": {
+      "additionalProperties": false,
+      "properties": {
+        "issue_ids": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_base_state": {
+          "const": "all_closed"
+        }
+      },
+      "required": [
+        "issue_ids",
+        "required_base_state"
+      ],
+      "type": "object"
+    },
+    "repository": {
+      "additionalProperties": false,
+      "properties": {
+        "base_sha": {
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "root": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        "worktree": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "base_sha",
+        "worktree",
+        "branch"
+      ],
+      "type": "object"
+    },
+    "return_contract": {
+      "additionalProperties": false,
+      "properties": {
+        "max_manifest_bytes": {
+          "const": 65536
+        },
+        "max_receipt_bytes": {
+          "const": 2048
+        },
+        "schema": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "max_manifest_bytes",
+        "max_receipt_bytes"
+      ],
+      "type": "object"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.worker-packet.v1"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_paths": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*//)(?!.*\\\\)[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "code_write": {
+          "type": "boolean"
+        },
+        "destructive": {
+          "const": false
+        },
+        "dolt_remote": {
+          "const": false
+        },
+        "external_io": {
+          "type": "boolean"
+        },
+        "external_side_effects": {
+          "const": false
+        },
+        "forbidden_paths": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*//)(?!.*\\\\)[^\\x00]+$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "git_remote": {
+          "const": false
+        },
+        "integration_mode": {
+          "enum": [
+            "commit",
+            "patch_package",
+            "external_export"
+          ]
+        },
+        "local_commit": {
+          "type": "boolean"
+        },
+        "merge": {
+          "const": false
+        },
+        "secret_access": {
+          "const": false
+        },
+        "spend": {
+          "const": false
+        },
+        "tracker_access": {
+          "const": "readonly"
+        },
+        "tracker_transport": {
+          "const": "safe_bd_only"
+        }
+      },
+      "required": [
+        "allowed_paths",
+        "forbidden_paths",
+        "tracker_access",
+        "tracker_transport",
+        "code_write",
+        "local_commit",
+        "merge",
+        "git_remote",
+        "dolt_remote",
+        "external_side_effects",
+        "external_io",
+        "destructive",
+        "spend",
+        "secret_access",
+        "integration_mode"
+      ],
+      "type": "object"
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "advisory_max_tool_calls": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "advisory_wall_clock_seconds": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "enforcement": {
+          "additionalProperties": false,
+          "properties": {
+            "child_max_iterations": {
+              "const": "hermes_runtime_hard_per_child"
+            },
+            "child_timeout": {
+              "const": "disabled_when_zero_else_hermes_runtime_hard_per_child"
+            },
+            "packet_delegation_allowed": {
+              "const": "worker_policy_only"
+            },
+            "spawn_depth": {
+              "const": "coordinator_preflight"
+            },
+            "tool_calls": {
+              "const": "parent_monitored_stop_then_reconcile"
+            },
+            "wall_clock": {
+              "const": "parent_monitored_stop_then_reconcile"
+            }
+          },
+          "required": [
+            "child_max_iterations",
+            "child_timeout",
+            "spawn_depth",
+            "packet_delegation_allowed",
+            "wall_clock",
+            "tool_calls"
+          ],
+          "type": "object"
+        },
+        "max_artifact_bytes": {
+          "maximum": 10485760,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "parent_import_root": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        },
+        "required_child_max_iterations": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "required_child_timeout_seconds": {
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "required_commands": {
+          "items": {
+            "items": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "type": "array"
+          },
+          "maxItems": 128,
+          "minItems": 0,
+          "type": "array"
+        },
+        "required_max_spawn_depth": {
+          "const": 1
+        },
+        "required_orchestrator_enabled": {
+          "const": false
+        },
+        "worker_outbox": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "required_commands",
+        "worker_outbox",
+        "parent_import_root",
+        "advisory_wall_clock_seconds",
+        "required_child_max_iterations",
+        "required_child_timeout_seconds",
+        "required_max_spawn_depth",
+        "required_orchestrator_enabled",
+        "advisory_max_tool_calls",
+        "enforcement",
+        "max_artifact_bytes"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "attempt_id",
+    "goal",
+    "issue",
+    "prerequisites",
+    "repository",
+    "scope",
+    "delegation",
+    "verification",
+    "return_contract"
+  ],
+  "title": "worker-packet v1",
+  "type": "object"
+}

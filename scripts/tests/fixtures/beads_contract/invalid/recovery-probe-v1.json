@@ -1,0 +1,15 @@
+{
+  "__unknown__": true,
+  "descriptor": [
+    "x"
+  ],
+  "expected_before_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "intended_after_identity": "x",
+  "intended_after_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "kind": "request",
+  "probe_type": "tracker_state",
+  "required_authority": "x",
+  "schema_version": "beads.recovery-probe.v1",
+  "target_identity": "scc-x",
+  "timeout_seconds": 1
+}

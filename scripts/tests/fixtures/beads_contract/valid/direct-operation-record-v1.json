@@ -1,0 +1,17 @@
+{
+  "effect_type": "claim",
+  "error": null,
+  "immutable_intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "prepared_at": "2026-09-03T12:00:00.000000Z",
+  "probe_evidence_path": "/tmp/probe-evidence.json",
+  "probe_evidence_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "readback_evidence_path": "/tmp/readback-evidence.json",
+  "readback_evidence_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "request_id": "request-00000001",
+  "resolution": "APPLIED",
+  "resolved_at": "2026-09-03T12:00:00.000000Z",
+  "safe_next_action": null,
+  "schema_version": "beads.direct-operation-record.v1",
+  "target_identity": "scc-x"
+}

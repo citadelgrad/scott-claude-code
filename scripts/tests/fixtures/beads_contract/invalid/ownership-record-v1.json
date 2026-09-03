@@ -1,0 +1,16 @@
+{
+  "__unknown__": true,
+  "acquired_at": "2026-09-03T12:00:00.000000Z",
+  "acquisition_operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "actor": "x",
+  "epoch": 0,
+  "issue_id": "x",
+  "issue_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "lease_expires_at": "2026-09-03T12:00:00.000000Z",
+  "renewed_at": "2026-09-03T12:00:00.000000Z",
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.ownership-record.v1",
+  "status": "active",
+  "token_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "tracker_state_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

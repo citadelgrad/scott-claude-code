@@ -1,2 +1,7 @@
 [tool.ty.environment]
 python-version = "3.12"
+
+[dependency-groups]
+dev = [
+    "jsonschema>=4.26,<5",
+]

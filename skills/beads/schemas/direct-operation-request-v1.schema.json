@@ -1,0 +1,134 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:direct-operation-request:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority_scope": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "effect_type": {
+      "enum": [
+        "claim",
+        "note",
+        "close",
+        "create",
+        "dependency_add",
+        "dependency_remove"
+      ]
+    },
+    "expected_precondition_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "immutable_intent_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "operation_key": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fields_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "issue_id": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "pattern": "^[^\\x00]+$",
+          "type": "string"
+        },
+        "other_issue_id": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "issue_id",
+        "other_issue_id",
+        "content",
+        "reason",
+        "fields_sha256"
+      ],
+      "type": "object"
+    },
+    "request_id": {
+      "pattern": "^[\\x20-\\x7e]{16,128}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.direct-operation-request.v1"
+    },
+    "target_identity": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "operation_key",
+    "effect_type",
+    "immutable_intent_sha256",
+    "target_identity",
+    "expected_precondition_sha256",
+    "authority_scope",
+    "payload"
+  ],
+  "title": "direct-operation-request v1",
+  "type": "object"
+}

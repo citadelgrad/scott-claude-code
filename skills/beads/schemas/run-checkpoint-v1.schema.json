@@ -1,0 +1,612 @@
+{
+  "$id": "urn:citadelgrad:scott-cc:beads:run-checkpoint:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority_snapshot_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "budget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_nonprogress_rounds": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_parallel": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_ready_fronts": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_worker_attempts_per_issue": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_parallel",
+        "max_ready_fronts",
+        "max_worker_attempts_per_issue",
+        "max_nonprogress_rounds"
+      ],
+      "type": "object"
+    },
+    "coordinator_session_id": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "pattern": "^[^\\x00]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{6}Z$",
+      "type": "string"
+    },
+    "generation": {
+      "maximum": 18446744073709551615,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "issue_snapshot_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "issues": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "additionalProperties": false,
+            "properties": {
+              "lane_freeze_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "none",
+                  "worker_returned",
+                  "packaging",
+                  "packaged",
+                  "invalid",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "lane_freeze_sha256"
+            ],
+            "type": "object"
+          },
+          "attempt": {
+            "additionalProperties": false,
+            "properties": {
+              "attempt_id": {
+                "anyOf": [
+                  {
+                    "pattern": "^attempt-(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "child_session_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 4096,
+                    "pattern": "^[^\\x00]*$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "delegation_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 4096,
+                    "pattern": "^[^\\x00]*$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "not_started",
+                  "dispatch_prepared",
+                  "dispatched",
+                  "joined",
+                  "failed",
+                  "cancelled",
+                  "unknown"
+                ]
+              },
+              "subagent_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 4096,
+                    "pattern": "^[^\\x00]*$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "attempt_id",
+              "delegation_id",
+              "subagent_id",
+              "child_session_id"
+            ],
+            "type": "object"
+          },
+          "base_sha": {
+            "anyOf": [
+              {
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gate": {
+            "additionalProperties": false,
+            "properties": {
+              "gate_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 1024,
+                    "minLength": 1,
+                    "pattern": "^[^\\x00]+$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "none",
+                  "pending",
+                  "resolved",
+                  "rejected",
+                  "expired",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "gate_id"
+            ],
+            "type": "object"
+          },
+          "head_sha": {
+            "anyOf": [
+              {
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "integration": {
+            "additionalProperties": false,
+            "properties": {
+              "candidate_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "event_id": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "not_started",
+                  "candidate_building",
+                  "candidate_built",
+                  "candidate_verified",
+                  "candidate_reviewed",
+                  "primary_prepared",
+                  "primary_integrated",
+                  "failed",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "candidate_sha256",
+              "event_id"
+            ],
+            "type": "object"
+          },
+          "ownership": {
+            "additionalProperties": false,
+            "properties": {
+              "actor": {
+                "anyOf": [
+                  {
+                    "maxLength": 4096,
+                    "pattern": "^[^\\x00]*$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "epoch": {
+                "anyOf": [
+                  {
+                    "maximum": 18446744073709551615,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "unheld",
+                  "prepared",
+                  "held",
+                  "release_prepared",
+                  "released",
+                  "conflict",
+                  "unknown"
+                ]
+              },
+              "token_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "epoch",
+              "token_sha256",
+              "actor"
+            ],
+            "type": "object"
+          },
+          "packet_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "readiness": {
+            "additionalProperties": false,
+            "properties": {
+              "reason": {
+                "maxLength": 4096,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "ready",
+                  "not_ready",
+                  "deferred",
+                  "gated",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "result_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "review": {
+            "additionalProperties": false,
+            "properties": {
+              "record_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "not_required",
+                  "required",
+                  "running",
+                  "passed",
+                  "failed",
+                  "inconclusive"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "record_sha256"
+            ],
+            "type": "object"
+          },
+          "tracker_status_observed": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "type": "string"
+          },
+          "verification": {
+            "additionalProperties": false,
+            "properties": {
+              "record_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "not_started",
+                  "running",
+                  "passed",
+                  "failed",
+                  "inconclusive"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "record_sha256"
+            ],
+            "type": "object"
+          },
+          "worker_result": {
+            "additionalProperties": false,
+            "properties": {
+              "outcome": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "completed",
+                      "blocked",
+                      "failed",
+                      "inconclusive",
+                      "cancelled"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "record_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "absent",
+                  "received",
+                  "accepted",
+                  "rejected",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "outcome",
+              "record_sha256"
+            ],
+            "type": "object"
+          },
+          "worktree": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tracker_status_observed",
+          "readiness",
+          "ownership",
+          "attempt",
+          "worker_result",
+          "artifact",
+          "verification",
+          "review",
+          "integration",
+          "gate",
+          "packet_sha256",
+          "result_sha256",
+          "worktree",
+          "branch",
+          "base_sha",
+          "head_sha"
+        ],
+        "type": "object"
+      },
+      "propertyNames": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "pattern": "^[^\\x00]+$",
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "operation_journal_path": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    },
+    "phase": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "previous_checkpoint_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "ready_front_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "repository_root": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    },
+    "root_issue_id": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "pattern": "^[^\\x00]+$",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "beads.run-checkpoint.v1"
+    },
+    "workspace": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "generation",
+    "root_issue_id",
+    "workspace",
+    "repository_root",
+    "coordinator_session_id",
+    "authority_snapshot_sha256",
+    "phase",
+    "budget",
+    "issues",
+    "operation_journal_path",
+    "issue_snapshot_sha256",
+    "ready_front_sha256",
+    "previous_checkpoint_sha256",
+    "created_at"
+  ],
+  "title": "run-checkpoint v1",
+  "type": "object"
+}

@@ -1,0 +1,17 @@
+{
+  "direct_worker_bd": {
+    "classification": "release_blocking_without_os_sandbox_or_pre_tool_hook",
+    "prevented_by_application_helpers": false
+  },
+  "detached_descendant_processes": {
+    "classification": "release_blocking_without_os_process_containment",
+    "prevented_by_application_helpers": false,
+    "release_blocking": true
+  },
+  "plugin_free_child_summary": {
+    "classification": "UNPREVENTABLE_PRE_INTERCEPTION_LEAK",
+    "controlled_persistence_rejects_or_redacts": true,
+    "prevented_before_parent_model_context": false,
+    "release_blocking": true
+  }
+}

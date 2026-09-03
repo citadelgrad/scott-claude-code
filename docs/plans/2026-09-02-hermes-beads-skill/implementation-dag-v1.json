@@ -1,0 +1,875 @@
+{
+  "commit_message": "Canonical Hermes-first Beads skill v1 DAG; edges are issue -> prerequisite",
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "Build Hermes-first Beads skill",
+      "type": "epic",
+      "priority": 1,
+      "estimate": 0,
+      "description": "## Background and purpose\nDeliver a local, production-grade Hermes-first Beads skill plus its narrow Python coordinator runtime. The product must make ordinary solo Beads work concise while giving multi-issue Hermes runs executable guarantees for single-writer tracker ownership, safe retries, isolation, verification, recovery, and honest human gates.\n\n## Required deliverables\n- A Tier-2 `skills/beads/` package with compact progressive-disclosure guidance.\n- A schema-driven coordinator runtime for swarm and recovery operations that prose alone cannot guarantee.\n- A paired evaluation system proving incremental value over no-skill and upstream-skill controls.\n- An isolated-profile rollout with explicit promotion or rollback decision.\n\n## Exact owned targets\n- `skills/beads/**`\n- `evaluation/beads-skill/**`\n- `scripts/tests/beads_*/**`\n- `repository distribution registries`\n\n## Dependencies and handoff\nStable task key: `epic`. Depends on: None; foundation work.. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Use every child issue’s unit, property, integration, crash-injection, live-evaluation, and rollout checks as the epic verification evidence.\n\n## Non-goals\n- No Hermes plugin or hook companion in v1.\n- No removal of the existing beads-epic-builder plugin.\n- No cross-actor ownership transfer saga.\n- No automatic production, spend, destructive, secret, push, or Dolt-remote action.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase V1. Exclusive owned targets: skills/beads/**; evaluation/beads-skill/**; scripts/tests/beads_*/**; repository distribution registries. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "The shipped package satisfies all 21 PRD acceptance behaviors, including trigger restraint, guarded claims, dependency safety, single-writer swarms, recovery, safe issue creation, and human sovereignty.\nThe v1 implementation graph has one release sink and no implementation child outside the epic.\nPromotion occurs only after the frozen paired evaluation and isolated shadow thresholds are satisfied; otherwise the known-good upstream skill remains active.\nNo child worker performs Beads lifecycle writes, and no protected production, spend, destructive, secret, or remote effect is inferred from persisted parent-attested evidence.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-v1"
+      ],
+      "metadata": {
+        "stable_task_key": "epic",
+        "phase": "V1",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/**",
+          "evaluation/beads-skill/**",
+          "scripts/tests/beads_*/**",
+          "repository distribution registries"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1"
+    },
+    {
+      "key": "t02",
+      "title": "Freeze authoritative sources and benchmark baseline",
+      "type": "task",
+      "priority": 1,
+      "estimate": 480,
+      "description": "## Background and purpose\nFreeze the factual and empirical foundation before authoring the candidate skill. Pin upstream Beads v1.2.2/commit 6c124203e771433a3550c348771a5b5e27fd3c21, observed bd 1.2.2 behavior, Hermes v0.21.0/commit 21b2095d, the current Agent Skills specification, and the local repository source map. Build and run no-skill and official-upstream-skill baselines without exposing candidate instructions.\n\n## Required deliverables\n- A source manifest with immutable citations, license provenance, observed CLI/runtime versions, and version-drift policy.\n- A split manifest for public development, hidden validation, and externally sealed test scenarios with hashes, access lists, fixed budgets, rubrics, and leakage controls.\n- At least 55 represented or explicitly deferred scenarios spanning trigger, lifecycle, graph, swarm, recovery, authority, secrecy, and efficiency behavior.\n- Paired baseline results with at least three repeats on the release-gating subset, isolated homes/workspaces/caches, randomized treatment order, blinded scoring, and contamination rejection.\n\n## Exact owned targets\n- `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`\n- `docs/plans/2026-09-02-hermes-beads-skill/benchmark-corpus-design-v1.json`\n- `docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json`\n\n## Dependencies and handoff\nStable task key: `t02`. Depends on: None; foundation work.. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Deterministically validate source manifest hashes and URLs.\n- Run corpus split, access-control, leakage, pre-state-equivalence, randomization, and schema checks.\n- Replay one intentionally contaminated pair and prove the scorer rejects it.\n\n## Non-goals\n- Do not author or tune candidate skill instructions.\n- Do not place hidden/sealed fixtures in the repository or evaluated workspace.\n- Do not mutate the active Hermes profile.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase A. Exclusive owned targets: docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json; docs/plans/2026-09-02-hermes-beads-skill/benchmark-corpus-design-v1.json; docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T02-001: Every load-bearing external claim has an authoritative mutable URL plus an immutable version, tag, commit, or dated specification identity.\nAC-T02-002: At least 55 planned scenarios are represented or explicitly deferred, every critical behavior has positive and negative evidence, and non-invocation tasks do not name the candidate skill.\nAC-T02-003: Hidden validation and sealed-test tasks, expected outcomes, scorers, and sibling fixtures are unavailable to the evaluated agent; a leakage probe proves the boundary.\nAC-T02-004: No-skill and upstream-skill baseline records have identical pre-state hashes, complete paired identities/counts/provenance, and at least three release-subset repeats.\nAC-T02-005: If the no-skill baseline already meets every target threshold, the issue records a stop/re-scope decision rather than manufacturing a decorative candidate.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-a"
+      ],
+      "metadata": {
+        "stable_task_key": "t02",
+        "phase": "A",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json",
+          "docs/plans/2026-09-02-hermes-beads-skill/benchmark-corpus-design-v1.json",
+          "docs/plans/2026-09-02-hermes-beads-skill/baseline-results-v1.json"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t03",
+      "title": "Create skill package spine and source attribution",
+      "type": "task",
+      "priority": 2,
+      "estimate": 300,
+      "description": "## Background and purpose\nCreate the Tier-2 `beads` package and a compact coordinator spine grounded only in baseline failures and approved product boundaries. The skill must trigger for explicit Beads/durable lifecycle work, remain quiet for unrelated or ephemeral work, and route detail one hop into references.\n\n## Required deliverables\n- Agent-Skills-valid frontmatter naming the skill `beads`, author Scott Nixon, MIT/upstream attribution, Hermes-first compatibility, and v1 version.\n- A 150–220-line preferred / 500-line hard-max `SKILL.md` containing boundary, routing precedence, invariants, STOP list, and completion contract—not a duplicated CLI manual.\n- README, license, source attribution, and static package contract checker.\n\n## Exact owned targets\n- `skills/beads/SKILL.md`\n- `skills/beads/README.md`\n- `skills/beads/LICENSE.txt`\n- `skills/beads/references/sources.md`\n- `skills/beads/scripts/beads_skill_contract.py`\n- `scripts/tests/test_beads_skill_contract.py`\n\n## Dependencies and handoff\nStable task key: `t03`. Depends on: t02. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Static frontmatter, link, line/token budget, required-label, source-attribution, and trigger-corpus tests in `test_beads_skill_contract.py`.\n\n## Non-goals\n- Do not implement behavioral references owned by Tasks 4–6.\n- Do not implement runtime schemas/helpers.\n- Do not copy the complete bd CLI reference.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase B. Exclusive owned targets: skills/beads/SKILL.md; skills/beads/README.md; skills/beads/LICENSE.txt; skills/beads/references/sources.md; skills/beads/scripts/beads_skill_contract.py; scripts/tests/test_beads_skill_contract.py. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T03-001: Installed metadata causes positive discovery families to load `beads` and negative families to remain untriggered in the frozen routing corpus.\nAC-T03-002: `SKILL.md` is at most 500 lines and 5,000 tokens, reports preferred-band drift separately, and every required operational detail is linked one hop away.\nAC-T03-003: Frontmatter and attribution validate against the current Agent Skills contract and preserve upstream Beads credit/license.\nAC-T03-004: The spine states parent-only lifecycle mutation, guarded readback, capability-gated completion, no automatic `bd init`, and honest blocked/inconclusive outcomes.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-b"
+      ],
+      "metadata": {
+        "stable_task_key": "t03",
+        "phase": "B",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/SKILL.md",
+          "skills/beads/README.md",
+          "skills/beads/LICENSE.txt",
+          "skills/beads/references/sources.md",
+          "skills/beads/scripts/beads_skill_contract.py",
+          "scripts/tests/test_beads_skill_contract.py"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t04",
+      "title": "Author solo lifecycle references",
+      "type": "task",
+      "priority": 2,
+      "estimate": 360,
+      "description": "## Background and purpose\nMake single-issue work complete without invoking swarm machinery. Define observe, execute-one, plan/create, gate, recovery, and finish intent routing; workspace identity/health; AC-before-create; guarded claim/readback; independent verification; closure; and explicit local-versus-remote authority.\n\n## Required deliverables\n- A complete solo path from `bd prime`/workspace preflight through claim, implementation, evidence, close, and handoff.\n- Issue-creation guidance that generates testable success/error/boundary AC before mutation and validates exact IDs/edges after creation.\n- Git/Dolt boundary rules that distinguish local completion from commit, push, and Dolt-remote delivery.\n\n## Exact owned targets\n- `skills/beads/references/operating-modes.md`\n- `skills/beads/references/workspace-and-health.md`\n- `skills/beads/references/solo-execution.md`\n- `skills/beads/references/issue-lifecycle.md`\n- `skills/beads/references/issue-quality.md`\n- `skills/beads/references/verification-and-closure.md`\n- `skills/beads/references/git-and-dolt-boundaries.md`\n\n## Dependencies and handoff\nStable task key: `t04`. Depends on: t03. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Task 14 will exercise every solo route; this task adds reference contract examples and static links used by those fixtures.\n\n## Non-goals\n- No multi-issue coordinator implementation.\n- No implicit commit, push, Dolt push, destructive cleanup, or workspace initialization.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase B. Exclusive owned targets: skills/beads/references/operating-modes.md; skills/beads/references/workspace-and-health.md; skills/beads/references/solo-execution.md; skills/beads/references/issue-lifecycle.md; skills/beads/references/issue-quality.md; skills/beads/references/verification-and-closure.md; skills/beads/references/git-and-dolt-boundaries.md. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T04-001: A healthy eligible issue is claimed and read back before tracked code mutation; changed eligibility, conflicting ownership, or unknown effect blocks implementation.\nAC-T04-002: Missing, ambiguous, wrong, or unhealthy workspace state causes zero Beads mutation and names the failed precondition.\nAC-T04-003: Issue creation requires testable AC before create and exact-ID/edge readback afterward; partial creation remains recoverable and is never reported complete.\nAC-T04-004: Passing implementation without remote authority reports local completion without claiming push or sync.\nAC-T04-005: An unavailable required verifier yields blocked/inconclusive status with disclosed coverage, never false success.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-b"
+      ],
+      "metadata": {
+        "stable_task_key": "t04",
+        "phase": "B",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/references/operating-modes.md",
+          "skills/beads/references/workspace-and-health.md",
+          "skills/beads/references/solo-execution.md",
+          "skills/beads/references/issue-lifecycle.md",
+          "skills/beads/references/issue-quality.md",
+          "skills/beads/references/verification-and-closure.md",
+          "skills/beads/references/git-and-dolt-boundaries.md"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t05",
+      "title": "Author dependency and ready-front references",
+      "type": "task",
+      "priority": 2,
+      "estimate": 240,
+      "description": "## Background and purpose\nTeach correct Beads edge direction and dynamic DAG scheduling. Ready membership is derived from a fresh captured snapshot; work in the same batch does not count as completed, and cycles/inversions block dispatch.\n\n## Required deliverables\n- Canonical dependency-direction examples and edge readback.\n- Dynamic ready-front algorithm, stable ordering, bounded selection, cycle/inversion handling, and refresh points after every lifecycle change.\n- Rules separating tracker readiness from local ownership, attempts, verification, review, integration, and gate state.\n\n## Exact owned targets\n- `skills/beads/references/dependencies-and-ready-fronts.md`\n\n## Dependencies and handoff\nStable task key: `t05`. Depends on: t03. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Task 15 supplies executable graph fixtures; this task supplies the normative examples and expected membership.\n\n## Non-goals\n- No native mutation helper.\n- No frozen wave scheduler.\n- No treating parent/child hierarchy as dependency edges.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase B. Exclusive owned targets: skills/beads/references/dependencies-and-ready-fronts.md. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T05-001: Linear, diamond, multi-root, and changed-live-state examples select exactly the blocker-free issues.\nAC-T05-002: Cycles, inverted edges, unresolved human/async gates, or inconsistent snapshots prevent dispatch with a typed reason.\nAC-T05-003: A blocker merely selected in the same batch does not make its dependent ready.\nAC-T05-004: Bounded selection is deterministic for identical snapshots and capacity.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-b"
+      ],
+      "metadata": {
+        "stable_task_key": "t05",
+        "phase": "B",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/references/dependencies-and-ready-fronts.md"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t06",
+      "title": "Author Hermes swarm, isolation, and recovery references",
+      "type": "task",
+      "priority": 2,
+      "estimate": 480,
+      "description": "## Background and purpose\nDefine the Hermes-first multi-issue protocol and its limits. The parent/coordinator is the sole lifecycle writer; writing workers are fungible depth-zero children in isolated worktrees or equivalent sandboxes; results are distrusted until independently verified; all children are joined or marked unknown; durable PAS/external executors are handoffs, not hidden ownership transfers.\n\n## Required deliverables\n- Worker packet/result/lane-freeze semantics, allowed and forbidden effects, worktree/export isolation, bounded parallelism `min(3, configured maximum)`, and `orchestrator=true` plus `max_spawn_depth=1` preflight.\n- Crash/resume protocol for requests, run pointers, ownership epochs, journal/checkpoints, unknown children, late results, and partial integration.\n- Human/async gate semantics and explicit PAS-versus-Hermes selection.\n- Mental-model rationale: single writer, structured concurrency, dynamic DAGs, bulkheads, fencing, idempotency, outbox limitations, and provenance.\n\n## Exact owned targets\n- `skills/beads/references/hermes-swarm.md`\n- `skills/beads/references/worker-contract.md`\n- `skills/beads/references/recovery-and-resume.md`\n- `skills/beads/references/human-and-async-gates.md`\n- `skills/beads/references/troubleshooting.md`\n- `skills/beads/references/pas-comparison.md`\n- `skills/beads/references/mental-models.md`\n\n## Dependencies and handoff\nStable task key: `t06`. Depends on: t03. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Task 16 supplies executable swarm/recovery fixtures; reference examples must map to its state vocabulary.\n\n## Non-goals\n- No child lifecycle writes.\n- No nested worker delegation.\n- No automatic merge-conflict resolution.\n- No plugin or hook implementation.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase B. Exclusive owned targets: skills/beads/references/hermes-swarm.md; skills/beads/references/worker-contract.md; skills/beads/references/recovery-and-resume.md; skills/beads/references/human-and-async-gates.md; skills/beads/references/troubleshooting.md; skills/beads/references/pas-comparison.md; skills/beads/references/mental-models.md. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T06-001: Every writing worker has one issue, one verified isolated writable filesystem, non-overlapping allowed scope, depth zero, and read-only safe Beads access.\nAC-T06-002: The parent joins/stops every child or persists UNKNOWN; cancelled/late/stale results cannot integrate.\nAC-T06-003: Worker success cannot close an issue until identity, immutable artifact, diff scope, AC evidence, and required verification are independently checked.\nAC-T06-004: Recovery from only Beads state plus versioned run artifacts reconstructs completed work, blockers, target identity, and the next safe action before mutation.\nAC-T06-005: Protected/human/async gates never turn timeout, absence, failed readback, or confidence into approval.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-b"
+      ],
+      "metadata": {
+        "stable_task_key": "t06",
+        "phase": "B",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/references/hermes-swarm.md",
+          "skills/beads/references/worker-contract.md",
+          "skills/beads/references/recovery-and-resume.md",
+          "skills/beads/references/human-and-async-gates.md",
+          "skills/beads/references/troubleshooting.md",
+          "skills/beads/references/pas-comparison.md",
+          "skills/beads/references/mental-models.md"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t07",
+      "title": "Implement cross-context schemas, safe transports, and validators",
+      "type": "task",
+      "priority": 1,
+      "estimate": 720,
+      "description": "## Background and purpose\nFreeze all machine boundaries before coordinator modules depend on them. Implement closed JSON Schema 2020-12 contracts, committed stdlib validators, the sole model-facing safe Beads transport, generic subprocess output sanitization, canonical operation results, and strict worker-packet validation.\n\n## Required deliverables\n- Closed schemas for worker packet/execution/lane, run/request/checkpoint/pointer, ownership/history, journal/recovery, operation result, handoff/result, approval, pending action/receipt, direct operation, native event, safe command result, reviewer/parent verification, and evaluation result.\n- Deterministic generated validators with schema/runtime drift detection.\n- `safe_bd.py` closed profiles with argv subprocesses, strict size/shape validation, in-memory scan/redaction, bounded output, and direct-worker-bd refusal.\n- `safe_output.py` that executes packet-bound argv directly, captures stdout/stderr before model exposure, redacts/rejects sensitive or ambiguous content, and persists only bounded schema-valid results.\n\n## Exact owned targets\n- `skills/beads/schemas/*.schema.json`\n- `skills/beads/scripts/generate_schema_runtime.py`\n- `skills/beads/scripts/schema_runtime.py`\n- `skills/beads/scripts/safe_output.py`\n- `skills/beads/scripts/safe_bd.py`\n- `skills/beads/scripts/operation_result.py`\n- `skills/beads/scripts/validate_worker_packet.py`\n- `scripts/tests/beads_contract/**`\n- `scripts/tests/fixtures/beads_contract/**`\n\n## Dependencies and handoff\nStable task key: `t07`. Depends on: t03. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Unit, property, malformed, size-boundary, secret-sentinel, profile allowlist, argv/no-shell, schema-generation, and operation-result contradiction tests.\n\n## Non-goals\n- No stateful run orchestration.\n- No raw Dolt-table access.\n- No generic tracker CRUD surface.\n- No schema edits by downstream concurrent tasks.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/schemas/*.schema.json; skills/beads/scripts/generate_schema_runtime.py; skills/beads/scripts/schema_runtime.py; skills/beads/scripts/safe_output.py; skills/beads/scripts/safe_bd.py; skills/beads/scripts/operation_result.py; skills/beads/scripts/validate_worker_packet.py; scripts/tests/beads_contract/**; scripts/tests/fixtures/beads_contract/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T07-001: Valid fixtures pass and unknown fields, malformed identities, status-inconsistent fields, oversized data, traversal, NUL, Unicode aliases, or unpaired surrogates fail closed.\nAC-T07-002: Every worker-visible Beads route uses `safe_bd.py`; direct worker `bd` and unknown command profiles are rejected.\nAC-T07-003: Secret sentinels in issue text, command output, Git/Dolt/native errors, or receipt strings never reach controlled stdout/disk/log/record/result; ambiguous redaction blocks.\nAC-T07-004: Schema/runtime generation is deterministic and CI detects any stale generated validator.\nAC-T07-005: Plugin-free Hermes child output’s pre-interception limitation is represented honestly as a release-blocking leak rather than claimed prevention.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t07",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/schemas/*.schema.json",
+          "skills/beads/scripts/generate_schema_runtime.py",
+          "skills/beads/scripts/schema_runtime.py",
+          "skills/beads/scripts/safe_output.py",
+          "skills/beads/scripts/safe_bd.py",
+          "skills/beads/scripts/operation_result.py",
+          "skills/beads/scripts/validate_worker_packet.py",
+          "scripts/tests/beads_contract/**",
+          "scripts/tests/fixtures/beads_contract/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t08",
+      "title": "Implement coordinator journal, checkpoint, and ownership core",
+      "type": "task",
+      "priority": 1,
+      "estimate": 900,
+      "description": "## Background and purpose\nImplement the local persistence and cooperative-fencing substrate. This module owns guarded run paths, canonical encoding/hashing, run secret, operation journal, checkpoint generations/pointer, bootstrap state machine, local per-issue epochs/tokens/history/leases, and filesystem-only reconciliation. It exposes typed pointer callbacks but does not import tracker code or publish a partial public start-run.\n\n## Required deliverables\n- Owner-only run/request/ownership storage with realpath containment, strict modes, collision checks, limits, and narrow atomic temp publication.\n- Write-ahead hash-chained PREPARED/resolution journal with deterministic torn-tail/corrupt-interior disposition and semantic operation IDs.\n- Checkpoint generation acceptance, fsync/rename/latest-pointer sequence, stale-pointer rebuild, and run bootstrap crash seams.\n- Monotonic local ownership epochs/HMAC-derived tokens, history/current consistency, soft leases, same-actor conflict detection, and explicit local-only fencing limits.\n\n## Exact owned targets\n- `skills/beads/scripts/coordinator_state.py`\n- `skills/beads/scripts/beads_ownership.py`\n- `skills/beads/scripts/reconcile_run.py`\n- `skills/beads/scripts/beads_coordinator.py (status/recover subset only)`\n- `scripts/tests/test_beads_coordinator_state.py`\n- `scripts/tests/test_beads_ownership.py`\n- `scripts/tests/test_beads_reconcile_run.py`\n\n## Dependencies and handoff\nStable task key: `t08`. Depends on: t06, t07. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Concurrent multiprocess ownership tests; property tests for canonical IDs/hash chains; crash injection after every write/fsync/rename/lock/pointer boundary; corrupt/torn journal and checkpoint recovery; path/permission/limit adversarial tests; command-denial spies.\n\n## Non-goals\n- No Beads claim/note/metadata/close.\n- No worker result, lane package, candidate integration, approval consumption, Hermes dispatch, remote action, or cleanup deletion.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/coordinator_state.py; skills/beads/scripts/beads_ownership.py; skills/beads/scripts/reconcile_run.py; skills/beads/scripts/beads_coordinator.py (status/recover subset only); scripts/tests/test_beads_coordinator_state.py; scripts/tests/test_beads_ownership.py; scripts/tests/test_beads_reconcile_run.py. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T08-001: Two concurrent processes for one issue produce exactly one held owner and one typed conflict; history remains valid.\nAC-T08-002: Acquire/renew/release/reacquire epochs are monotonic; stale token/epoch, overflow, expiry, missing history, or mismatch fails closed without theft/reset.\nAC-T08-003: Raw run secret exists only in owner-mode final run state, one narrowly named publication temp, and process memory; tokens/secrets never enter results, checkpoints, logs, snapshots, fixtures, or Beads.\nAC-T08-004: Every bootstrap crash boundary reconstructs inert-unowned, held-at-known-epoch, or typed unknown/conflict without duplicate ownership.\nAC-T08-005: Every journal/checkpoint crash/tamper fixture yields the specified authoritative state; unaccepted generations never become current.\nAC-T08-006: Opaque issue IDs, path aliases, symlinks/hardlinks, alternate roots, wrong modes, unsupported locks, collisions, and size/retention boundaries cannot escape the approved root.\nAC-T08-007: The core executes no bd, Git, Hermes, Dolt, remote, cleanup deletion, semantic decision, or integration action.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t08",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/coordinator_state.py",
+          "skills/beads/scripts/beads_ownership.py",
+          "skills/beads/scripts/reconcile_run.py",
+          "skills/beads/scripts/beads_coordinator.py (status/recover subset only)",
+          "scripts/tests/test_beads_coordinator_state.py",
+          "scripts/tests/test_beads_ownership.py",
+          "scripts/tests/test_beads_reconcile_run.py"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t09",
+      "title": "Implement worker-result helper and attempt outbox",
+      "type": "task",
+      "priority": 2,
+      "estimate": 420,
+      "description": "## Background and purpose\nGive depth-zero workers one bounded, packet-bound way to run declared verification commands and return immutable evidence without touching parent run state or Beads.\n\n## Required deliverables\n- Initialize/finalize lifecycle under the exact attempt outbox bound in a validated worker packet.\n- `run-command` execution for bounded argv arrays through safe output capture; no shell strings or prewritten raw-log registration.\n- Terminal worker-result manifest capped at 64 KiB plus a sanitized receipt capped at 2 KiB, binding run/issue/epoch/attempt/packet/base/worktree/artifact/command evidence.\n\n## Exact owned targets\n- `skills/beads/scripts/worker_result.py`\n- `skills/beads/scripts/validate_worker_execution_result.py`\n- `scripts/tests/beads_worker_result/**`\n\n## Dependencies and handoff\nStable task key: `t09`. Depends on: t07. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Valid/invalid status variants; command allowlist and secret output; path aliasing; size limits; crash-safe finalize; stale/duplicate receipt; forbidden-effect spies.\n\n## Non-goals\n- No tracker writes.\n- No parent checkpoint writes.\n- No integration or remote actions.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/worker_result.py; skills/beads/scripts/validate_worker_execution_result.py; scripts/tests/beads_worker_result/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T09-001: The helper writes only inside the packet-bound attempt outbox and rejects symlink, traversal, wrong-owner, wrong-worktree, stale epoch/attempt, or packet-hash mismatch.\nAC-T09-002: Required commands execute only as bounded packet-declared argv through `safe_output.py`; undeclared commands and prewritten logs are rejected.\nAC-T09-003: Every terminal status enforces its conditional evidence fields, scope declaration, and immutable artifact identity.\nAC-T09-004: The helper performs zero Beads, parent-run, integration, commit, push, Dolt, remote, or child-delegation mutation.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t09",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/worker_result.py",
+          "skills/beads/scripts/validate_worker_execution_result.py",
+          "scripts/tests/beads_worker_result/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t10",
+      "title": "Implement lane freeze and integration-candidate runtime",
+      "type": "task",
+      "priority": 2,
+      "estimate": 660,
+      "description": "## Background and purpose\nConvert verified worker output into immutable parent-owned lane freezes, then assemble/test/review a disposable combined candidate before any primary-checkout mutation.\n\n## Required deliverables\n- Deterministic commit, parent-created patch package, or approved external export normalization bound to packet/base/attempt/epoch.\n- Parent reproduction and independent verification of worker artifact and allowed write scope.\n- Disposable combined integration worktree/tree hash with expected predecessor, deterministic ordering, required tests, and mandatory independent review matrix.\n- Journaled guarded apply to the primary checkout only after exact candidate verification; conflicts stop rather than auto-resolve.\n\n## Exact owned targets\n- `skills/beads/scripts/coordinator_integration.py`\n- `skills/beads/scripts/package_lane.py`\n- `skills/beads/scripts/validate_lane_freeze.py`\n- `scripts/tests/beads_integration/**`\n\n## Dependencies and handoff\nStable task key: `t10`. Depends on: t06, t08, t09. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Commit/patch/export normalization; reproduction; overlap/conflict; forged/stale artifacts; combined-candidate test/review failure; predecessor race; crash-before/after apply/readback; successful deterministic integration.\n\n## Non-goals\n- No tracker close before verified integration.\n- No simple-conflict auto-resolution.\n- No push/Dolt remote/production mutation.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/coordinator_integration.py; skills/beads/scripts/package_lane.py; skills/beads/scripts/validate_lane_freeze.py; scripts/tests/beads_integration/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T10-001: Mutable uncommitted worker state without a selected immutable transfer identity is never integrated.\nAC-T10-002: Scope escape, stale base/epoch/attempt, unreproducible patch/export, forged evidence, or verification mismatch prevents lane freeze.\nAC-T10-003: Combined conflicts, failed tests, or required-review failure leave the primary checkout unchanged and all successful lane artifacts recoverable.\nAC-T10-004: Primary application requires exact reviewed candidate hash and expected predecessor; readback mismatch resolves conflict/unknown, never success.\nAC-T10-005: Cross-issue behavior receives an independent combined-candidate review distinct from lane self-report.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t10",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/coordinator_integration.py",
+          "skills/beads/scripts/package_lane.py",
+          "skills/beads/scripts/validate_lane_freeze.py",
+          "scripts/tests/beads_integration/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t11",
+      "title": "Implement ready-front and conflict coordinator capabilities",
+      "type": "task",
+      "priority": 2,
+      "estimate": 480,
+      "description": "## Background and purpose\nBuild a deterministic dynamic ready front from one safe bulk snapshot and exclude root/non-writing issues, blocked work, invalid graphs, ownership conflicts, and overlapping or unknown write scopes before lane acquisition or dispatch.\n\n## Required deliverables\n- Bulk safe snapshot capture with workspace/CLI/profile identity, timestamp, hash, and bounded manifest output.\n- Consistent graph parser, cycle/inversion detection, stable ready ordering, capacity bounds, and non-writing-root exclusion.\n- Glob/path normalization and conservative overlap/unknown classification including shared manifests and symlink aliases.\n\n## Exact owned targets\n- `skills/beads/scripts/coordinator_front.py`\n- `skills/beads/scripts/capture_beads_snapshot.py`\n- `skills/beads/scripts/build_ready_front.py`\n- `skills/beads/scripts/detect_write_conflicts.py`\n- `scripts/tests/beads_front/**`\n\n## Dependencies and handoff\nStable task key: `t11`. Depends on: t05, t07, t08. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Graph fixture matrix; snapshot consistency; cycle/inversion; bounded selection; root exclusion; glob/path/symlink conflict property tests; mutation-denial spies.\n\n## Non-goals\n- No lane claim/ownership saga.\n- No Hermes dispatch.\n- No direct edits to Task-7 sanitizers/schemas.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/coordinator_front.py; skills/beads/scripts/capture_beads_snapshot.py; skills/beads/scripts/build_ready_front.py; skills/beads/scripts/detect_write_conflicts.py; scripts/tests/beads_front/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T11-001: Ready membership is exactly correct for linear, diamond, multi-root, deferred, human-gated, and changed-live-state graphs.\nAC-T11-002: Root coordination issues, cycles, inverted/inconsistent edges, same-batch blockers, unresolved gates, and stale snapshots never dispatch as writing lanes.\nAC-T11-003: Overlapping, aliased, symlinked, shared-manifest, or unknown write scopes serialize or block; disjoint scopes may proceed up to capacity.\nAC-T11-004: Snapshot parsing and selection are deterministic and perform no mutation.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t11",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/coordinator_front.py",
+          "skills/beads/scripts/capture_beads_snapshot.py",
+          "skills/beads/scripts/build_ready_front.py",
+          "skills/beads/scripts/detect_write_conflicts.py",
+          "scripts/tests/beads_front/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t12",
+      "title": "Implement guarded tracker, direct/protected operations, approval, and durable handoff",
+      "type": "task",
+      "priority": 1,
+      "estimate": 900,
+      "description": "## Background and purpose\nOwn every permitted native tracker lifecycle effect and the contracts around parent authority. Implement the sole lane claim-front/compensation saga, caller-stable direct solo/create effects, run-pointer publication/succession, one-shot parent-attested design decisions, protected human-action prepare/resolve, and immutable retained-ownership durable executor handoff.\n\n## Required deliverables\n- Claim-front sequence: post-selection recheck, local epoch acquire, guarded native claim/readback, compensation on partial failure, and no child tracker writes.\n- Direct operation intent/marker/effect/probe/resolution under stable caller operation keys for claim/note/close/create/edge changes; changed intent conflicts and ambiguous causality remains unknown.\n- Public start-run pointer callback support: publish/read back root pointer before checkpoint 2 and request-active; recovery can discover incomplete bootstrap without notes fallback.\n- `protected_action.py` PREPARED action and receipt resolver with safe independent typed readback and APPLIED/NOT_APPLIED/CONFLICT/UNKNOWN outcomes; it never performs the protected effect.\n- One-shot parent-attested design-decision grants only; no persisted execution approval or trusted adapter fiction.\n- Hash-bound sanitized durable handoff/result import while Hermes retains lifecycle ownership and executor remains read-only in Beads.\n\n## Exact owned targets\n- `skills/beads/scripts/coordinator_tracker.py`\n- `skills/beads/scripts/direct_operation.py`\n- `skills/beads/scripts/protected_action.py`\n- `skills/beads/scripts/coordinator_handoff.py`\n- `scripts/tests/beads_tracker/**`\n\n## Dependencies and handoff\nStable task key: `t12`. Depends on: t04, t06, t07, t08. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Multiprocess/partial claim compensation; direct-effect crash/retry and marker probes; run-pointer bootstrap/succession; approval consume/crash/reuse; protected receipt/probe disagreement; durable handoff identity/expiry/result cases; secret redaction; forbidden-effect spies.\n\n## Non-goals\n- No Hermes dispatch call.\n- No primary integration.\n- No execution-approval adapter.\n- No remote/protected effect execution.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/coordinator_tracker.py; skills/beads/scripts/direct_operation.py; skills/beads/scripts/protected_action.py; skills/beads/scripts/coordinator_handoff.py; scripts/tests/beads_tracker/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T12-001: Claim-front produces ownership only for eligible non-root lanes; every partial native/local failure compensates or records exact conflict/unknown without dispatch.\nAC-T12-002: Retrying an identical direct operation converges by marker and probe; changed request conflicts; unknown close/create/edge causality never blindly replays.\nAC-T12-003: Successful start-run requires root-pointer publication/readback, checkpoint 2, and request-active in that order; every crash point remains discoverable and resumable.\nAC-T12-004: Protected effects require direct non-reusable current-harness/human action; only a matching receipt plus agreeing independent readback records APPLIED.\nAC-T12-005: Parent-attested grants authorize one exact design-decision operation and cannot authorize production, spend, destructive, secret, push, Dolt-remote, or other protected effects.\nAC-T12-006: Durable executor identity/artifact/epoch/handoff mismatch, expiry, Beads mutation, duplicate/late result, or unknown launch blocks acceptance; a valid result re-enters ordinary parent verification.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t12",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/coordinator_tracker.py",
+          "skills/beads/scripts/direct_operation.py",
+          "skills/beads/scripts/protected_action.py",
+          "skills/beads/scripts/coordinator_handoff.py",
+          "scripts/tests/beads_tracker/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t13",
+      "title": "Assemble coordinator CLI and command-sequence tests",
+      "type": "task",
+      "priority": 1,
+      "estimate": 540,
+      "description": "## Background and purpose\nWire the frozen coordinator modules behind one thin public CLI without moving feature logic into the dispatcher. Complete public start-run, action preparation/receipt, freeze/verify/review, candidate application, tracker update, gate, handoff, finish, status, recovery, and cleanup sequences.\n\n## Required deliverables\n- Complete documented subcommand surface with schema validation, stable exit codes, bounded output, capability checks, and run/issue/epoch identity at every boundary.\n- Task-8 typed pointer callback slots wired to Task-12 observation/publication so start-run has no circular import or partial public implementation.\n- Prepared Hermes dispatch/control actions that the agent executes externally, with matching receipt ingestion; runtime never calls model tools itself.\n- End-to-end command sequencing from request allocation through reconciled finish and terminal pointer succession.\n\n## Exact owned targets\n- `skills/beads/scripts/beads_coordinator.py`\n- `scripts/tests/beads_coordinator_cli/**`\n\n## Dependencies and handoff\nStable task key: `t13`. Depends on: t08, t10, t11, t12. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- CLI help/schema/exit snapshots; full happy path; every crash boundary; action/receipt variant matrix; resume; cancellation; cleanup retention/refusal; dispatcher-thinness/static import checks.\n\n## Non-goals\n- No model API invocation inside Python.\n- No protected/remote effect execution.\n- No schema changes.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase C. Exclusive owned targets: skills/beads/scripts/beads_coordinator.py; scripts/tests/beads_coordinator_cli/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T13-001: Public start-run cannot report success before pointer publication/readback, checkpoint 2, and request-active; crash recovery converges without duplicate ownership.\nAC-T13-002: Every pending action uses a closed canonical discriminator and every matching receipt has a documented ingestion/resolution path.\nAC-T13-003: Malformed/stale/mismatched identity, unsupported capability, unknown effect, or unavailable required verifier produces the exact non-success status/exit code.\nAC-T13-004: The dispatcher contains registration/sequencing only and imports module invariants rather than duplicating them.\nAC-T13-005: Cleanup deletes only terminal fully reconciled artifacts past retention and refuses active, unknown, unintegrated, unreconciled, broad-root, or wrong-owner targets.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-c"
+      ],
+      "metadata": {
+        "stable_task_key": "t13",
+        "phase": "C",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/beads_coordinator.py",
+          "scripts/tests/beads_coordinator_cli/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t14",
+      "title": "Build solo lifecycle conformance fixtures",
+      "type": "task",
+      "priority": 2,
+      "estimate": 480,
+      "description": "## Background and purpose\nProve the complete solo/read/create/recover/gate/finish contract against realistic isolated repositories and Beads workspaces, including safe output and direct-operation crash recovery.\n\n## Required deliverables\n- Fixture matrix for workspace health, guarded claim, AC/evidence, direct create/edge/note/close recovery, authority-aware finish, and protected-action receipt resolution.\n- Secret-bearing issue/command/error fixtures and an explicit expected limitation for plugin-free Hermes child pre-interception.\n\n## Exact owned targets\n- `scripts/tests/beads_solo/**`\n- `scripts/tests/fixtures/beads_solo/**`\n\n## Dependencies and handoff\nStable task key: `t14`. Depends on: t04, t07, t12. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- These fixtures are the executable tests; include detailed bounded logs and deterministic setup/teardown with no default-profile mutation.\n\n## Non-goals\n- Do not edit production modules or shared schemas/fixtures.\n- Do not run real remote/protected effects.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase E. Exclusive owned targets: scripts/tests/beads_solo/**; scripts/tests/fixtures/beads_solo/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T14-001: Healthy solo happy paths complete with exact-ID/state/evidence readback and zero pre-claim tracked mutation.\nAC-T14-002: Missing/wrong/unhealthy workspaces, changed ownership/readiness, failed/unavailable verification, and native failures produce exact blocked/inconclusive outcomes without false closure.\nAC-T14-003: Direct effect crash/retry fixtures converge or remain recoverable UNKNOWN; none duplicates a non-idempotent effect.\nAC-T14-004: Protected receipt resolution requires independent agreeing readback; remote authority absence reports local-only completion.\nAC-T14-005: Controlled surfaces contain no raw secret sentinel or digest; the disclosed Hermes limitation is release-blocking if observed.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-e"
+      ],
+      "metadata": {
+        "stable_task_key": "t14",
+        "phase": "E",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "scripts/tests/beads_solo/**",
+          "scripts/tests/fixtures/beads_solo/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t15",
+      "title": "Build DAG scheduling conformance fixtures",
+      "type": "task",
+      "priority": 2,
+      "estimate": 300,
+      "description": "## Background and purpose\nProve dependency direction, consistent snapshot parsing, dynamic ready-front recomputation, conflict serialization, and bounded deterministic selection.\n\n## Required deliverables\n- Linear, diamond, multi-root, cycle, inversion, deferred/human blocker, dynamic-close/failure/new-blocker/reprioritization, and oversized-scope fixtures.\n- Expected ready membership and conflict classifications for every state transition.\n\n## Exact owned targets\n- `scripts/tests/beads_dag/**`\n- `scripts/tests/fixtures/beads_dag/**`\n\n## Dependencies and handoff\nStable task key: `t15`. Depends on: t05, t11. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- These fixtures are executable unit/property/integration tests with deterministic state snapshots and mutation-denial assertions.\n\n## Non-goals\n- Do not edit production modules or shared schemas/fixtures.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase F. Exclusive owned targets: scripts/tests/beads_dag/**; scripts/tests/fixtures/beads_dag/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T15-001: Ready membership is 100% correct across the fixture matrix.\nAC-T15-002: Cycles/inversions/inconsistent snapshots block dispatch with no mutation.\nAC-T15-003: A same-batch blocker never unlocks its dependent, and live changes require fresh recomputation.\nAC-T15-004: Capacity and stable ordering are deterministic; overlapping/unknown scopes do not run concurrently.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-f"
+      ],
+      "metadata": {
+        "stable_task_key": "t15",
+        "phase": "F",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "scripts/tests/beads_dag/**",
+          "scripts/tests/fixtures/beads_dag/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t16",
+      "title": "Build swarm, isolation, and recovery conformance fixtures",
+      "type": "task",
+      "priority": 1,
+      "estimate": 780,
+      "description": "## Background and purpose\nExercise the full parent-coordinated runtime under success, conflict, partial failure, cancellation, crash, resume, stale/forged evidence, and durable handoff conditions.\n\n## Required deliverables\n- Packet/result/lane-freeze variants; worktree/sandbox isolation and write-conflict fixtures; parent-only lifecycle checks; independent lane/candidate verification; mixed batch and integration fixtures.\n- Crash injection around every journal/native/checkpoint/pointer/approval boundary, consecutive root runs, unknown/late children, repeat resume, and durable executor handoff/result cases.\n\n## Exact owned targets\n- `scripts/tests/beads_swarm/**`\n- `scripts/tests/fixtures/beads_swarm/**`\n\n## Dependencies and handoff\nStable task key: `t16`. Depends on: t06, t08, t09, t10, t11, t12, t13. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- These fixtures are executable multiprocess/E2E tests with bounded detailed logs, deterministic crash seams, and isolated repositories/homes.\n\n## Non-goals\n- Do not edit production modules or shared schemas/fixtures.\n- Do not perform real remote/protected effects.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase G. Exclusive owned targets: scripts/tests/beads_swarm/**; scripts/tests/fixtures/beads_swarm/**. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T16-001: All valid swarms have zero duplicate ownership and every writing lane is isolated, in scope, depth zero, and parent-verified.\nAC-T16-002: Child tracker mutation, forged/stale/missing evidence, failed review/test, candidate conflict, or unknown result is never accepted or closed.\nAC-T16-003: Mixed batches integrate/close only independently verified successful lanes while failed siblings remain recoverable.\nAC-T16-004: Every crash/resume case converges to the documented terminal or typed recoverable state without blind replay.\nAC-T16-005: Durable handoff retains Hermes lifecycle ownership, keeps executor Beads access read-only, and validates immutable return identity before ordinary integration.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-g"
+      ],
+      "metadata": {
+        "stable_task_key": "t16",
+        "phase": "G",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "scripts/tests/beads_swarm/**",
+          "scripts/tests/fixtures/beads_swarm/**"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t17",
+      "title": "Build paired live evaluation harness with hidden splits",
+      "type": "task",
+      "priority": 2,
+      "estimate": 720,
+      "description": "## Background and purpose\nBuild the release-blocking paired evaluator before candidate optimization. Normalize trajectories without hidden reasoning/secrets, deterministically score observable behavior, use semantic judges only where unavoidable, and aggregate trigger/compliance/boundary/outcome/recovery/efficiency/lift metrics with frozen budgets and provenance.\n\n## Required deliverables\n- Isolated per-treatment fixture cloning/homes/registries/session/actor/cache/process namespaces and pre-state hash equality.\n- Trajectory normalizer, deterministic state/tool-order checks, bounded blinded semantic rubric, paired aggregate scorer, confidence intervals/variance, JSON plus Markdown reports, and nonzero hard-gate exits.\n- Public development corpus in repo; hidden validation and sealed test stores remain externally inaccessible.\n\n## Exact owned targets\n- `skills/beads/scripts/evaluate_skill.py`\n- `skills/beads/evals/README.md`\n- `skills/beads/evals/public-dev/**`\n- `evaluation/beads-skill/harness/**`\n- `evaluation/beads-skill/manifests/**`\n- `evaluation/beads-skill/public-reports/**`\n- `scripts/tests/test_beads_skill_benchmark.py`\n\n## Dependencies and handoff\nStable task key: `t17`. Depends on: t02, t07. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Normalizer golden tests; scorer formula/property tests; contaminated-pair and leakage tests; semantic-judge fallback/unavailability; deterministic report snapshots; hard-gate exit tests.\n\n## Non-goals\n- Do not tune candidate instructions on hidden/sealed data.\n- Do not store hidden/sealed corpora in Git.\n- Do not mutate active Hermes profile.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase H. Exclusive owned targets: skills/beads/scripts/evaluate_skill.py; skills/beads/evals/README.md; skills/beads/evals/public-dev/**; evaluation/beads-skill/harness/**; evaluation/beads-skill/manifests/**; evaluation/beads-skill/public-reports/**; scripts/tests/test_beads_skill_benchmark.py. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T17-001: Each pair binds identical task/model/harness/budget/pre-state and distinct isolated mutable state; contaminated or unpaired results are rejected.\nAC-T17-002: Deterministic gates, not semantic judges, decide command order, identities, filesystem/tracker state, safety violations, and outcomes.\nAC-T17-003: Reports compute exact denominators, exclusions, lift versus upstream on the frozen local-gap subset, efficiency tails, variance, and provenance.\nAC-T17-004: Hidden/sealed task text, rubrics, expected results, sibling fixtures, and raw secret/reasoning content never enter candidate context or repository.\nAC-T17-005: Any hard gate failure returns nonzero and cannot be papered over by an aggregate score.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-h"
+      ],
+      "metadata": {
+        "stable_task_key": "t17",
+        "phase": "H",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/scripts/evaluate_skill.py",
+          "skills/beads/evals/README.md",
+          "skills/beads/evals/public-dev/**",
+          "evaluation/beads-skill/harness/**",
+          "evaluation/beads-skill/manifests/**",
+          "evaluation/beads-skill/public-reports/**",
+          "scripts/tests/test_beads_skill_benchmark.py"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t18",
+      "title": "Run skill RED/GREEN/REFACTOR optimization to steady state",
+      "type": "task",
+      "priority": 1,
+      "estimate": 960,
+      "description": "## Background and purpose\nOptimize one mutable candidate against frozen development evidence, select among frozen versions using hidden validation without disclosure, and use the sealed test split once only after freezing the release candidate. Preserve all safety boundaries while removing unproven instruction bulk.\n\n## Required deliverables\n- RED baselines recording exact misses/rationalizations against no-skill and upstream controls.\n- GREEN changes limited to proven local gaps; REFACTOR passes reducing duplication and improving triggers/progressive disclosure.\n- Cross-model/harness release matrix and classification of skill versus agent/harness faults.\n- Two consecutive rounds with no structural skill change and every hard gate passing.\n\n## Exact owned targets\n- `skills/beads/SKILL.md`\n- `skills/beads/references/**`\n- `skills/beads/scripts/** (only evidence-driven corrections)`\n- `evaluation/beads-skill/public-reports/candidate-*.{json,md}`\n\n## Dependencies and handoff\nStable task key: `t18`. Depends on: t14, t15, t16, t17. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Run full deterministic E/F/G suites each round; paired development trajectories; hidden validation on frozen candidates; one sealed release run; cross-model/harness matrix; retain immutable reports/hashes.\n\n## Non-goals\n- No benchmark/rubric/threshold changes after seeing candidate results.\n- No active-profile promotion.\n- No safety-boundary weakening to improve score.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase I. Exclusive owned targets: skills/beads/SKILL.md; skills/beads/references/**; skills/beads/scripts/** (only evidence-driven corrections); evaluation/beads-skill/public-reports/candidate-*.{json,md}. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T18-001: Candidate macro compliance improves at least 10 percentage points over upstream on the frozen local-gap subset.\nAC-T18-002: Candidate outcome and negative-restraint scores are non-inferior to upstream by no more than 2 percentage points, add zero hard safety violations, and keep median solo token/paid cost within 25%.\nAC-T18-003: Trigger precision/recall, lifecycle, boundary, recovery, false-block, and efficiency thresholds defined by the frozen evaluator all pass in two consecutive structurally stable rounds.\nAC-T18-004: Only development data drives edits; hidden validation selects frozen candidates without disclosure; sealed test is used only after final freeze and is rotated/versioned after use.\nAC-T18-005: Any unavailable required release verifier leaves the candidate blocked/inconclusive rather than promoted.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-i"
+      ],
+      "metadata": {
+        "stable_task_key": "t18",
+        "phase": "I",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills/beads/SKILL.md",
+          "skills/beads/references/**",
+          "skills/beads/scripts/** (only evidence-driven corrections)",
+          "evaluation/beads-skill/public-reports/candidate-*.{json,md}"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t19",
+      "title": "Integrate distribution, provenance, catalogs, and orchestration registry",
+      "type": "task",
+      "priority": 2,
+      "estimate": 360,
+      "description": "## Background and purpose\nMake the new package distributable and attributable using existing repository conventions without changing the active user profile. Register orchestration metadata/context budgets and update every inventory/count discovered by repository verifiers.\n\n## Required deliverables\n- Portable skills manifest and install documentation entries.\n- Scott author/adaptation credit plus retained upstream Beads license/provenance.\n- Orchestration registry entry and context-budget contract.\n- All generated/manual catalogs and counts updated consistently.\n\n## Exact owned targets\n- `skills.sh.json`\n- `docs/hardened-skills.md`\n- `repository install documentation`\n- `scripts/verify_orchestration_contracts.py registry`\n- `scripts/tests/test_beads_skill_context_budget.py`\n- `scripts/tests/test_beads_skill_distribution.py`\n- `all verifier-discovered counts/catalogs`\n\n## Dependencies and handoff\nStable task key: `t19`. Depends on: t03. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Distribution verifier, orchestration contract verifier, plugin verifier where affected, link checks, metadata/count drift tests.\n\n## Non-goals\n- No candidate activation or global install.\n- No epic-builder removal.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase D. Exclusive owned targets: skills.sh.json; docs/hardened-skills.md; repository install documentation; scripts/verify_orchestration_contracts.py registry; scripts/tests/test_beads_skill_context_budget.py; scripts/tests/test_beads_skill_distribution.py; all verifier-discovered counts/catalogs. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T19-001: Repository distribution and orchestration verifiers discover exactly one canonical `beads` package with correct paths, metadata, and budgets.\nAC-T19-002: Every install/catalog/count surface agrees and has no broken local link or stale generated artifact.\nAC-T19-003: Attribution names Scott as author/adaptation author and preserves upstream Beads source/license.\nAC-T19-004: Distribution work does not alter the active global/default-profile skill or symlink.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-d"
+      ],
+      "metadata": {
+        "stable_task_key": "t19",
+        "phase": "D",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "skills.sh.json",
+          "docs/hardened-skills.md",
+          "repository install documentation",
+          "scripts/verify_orchestration_contracts.py registry",
+          "scripts/tests/test_beads_skill_context_budget.py",
+          "scripts/tests/test_beads_skill_distribution.py",
+          "all verifier-discovered counts/catalogs"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t20",
+      "title": "Verify temporary-profile install and portable smoke behavior",
+      "type": "task",
+      "priority": 2,
+      "estimate": 480,
+      "description": "## Background and purpose\nInstall the frozen final-name candidate into isolated cloned Hermes profiles/homes and verify discovery, source identity, solo behavior, coordinator capability fallback, and rollback without touching the active default profile.\n\n## Required deliverables\n- Temporary-profile installer/smoke fixtures for the current Hermes environment and informational compatible-agent surfaces.\n- Exact installed artifact/source hash verification and known-good upstream rollback pointer.\n- Fail-closed behavior on unsupported locking/filesystem/delegation hosts, degrading to solo/read guidance rather than pretending swarm guarantees.\n\n## Exact owned targets\n- `scripts/tests/beads_portable/**`\n- `scripts/tests/fixtures/beads_portable/**`\n- `evaluation/beads-skill/public-reports/portable-smoke-v1.{json,md}`\n\n## Dependencies and handoff\nStable task key: `t20`. Depends on: t18, t19. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Fresh isolated-profile install/discovery/source-hash checks; solo smoke; capability-denial matrix; uninstall/rollback; default-profile before/after hash assertion.\n\n## Non-goals\n- No default-profile activation.\n- No production repository or remote mutation.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase J. Exclusive owned targets: scripts/tests/beads_portable/**; scripts/tests/fixtures/beads_portable/**; evaluation/beads-skill/public-reports/portable-smoke-v1.{json,md}. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T20-001: An isolated profile loads `beads` from the exact frozen source hash under its final name and leaves the default profile byte-for-byte unchanged.\nAC-T20-002: Healthy solo smoke succeeds; missing capabilities cause the documented typed refusal/fallback without unsafe mutation.\nAC-T20-003: Temporary install/uninstall is repeat-safe, confined to the isolated home, and restores the known-good upstream pointer.\nAC-T20-004: Portable informational runs disclose unsupported guarantees rather than claiming Hermes-equivalent behavior.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-j"
+      ],
+      "metadata": {
+        "stable_task_key": "t20",
+        "phase": "J",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "scripts/tests/beads_portable/**",
+          "scripts/tests/fixtures/beads_portable/**",
+          "evaluation/beads-skill/public-reports/portable-smoke-v1.{json,md}"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t21",
+      "title": "Run isolated-profile real-work shadow evaluation",
+      "type": "task",
+      "priority": 2,
+      "estimate": 600,
+      "description": "## Background and purpose\nUse the exact final candidate on representative low-risk real work inside its isolated profile with human observation. Measure false/missed triggers, rationalizations, recovery failures, safety boundaries, latency, tokens, and cost before any promotion.\n\n## Required deliverables\n- Predeclared low-risk shadow task set and authority boundaries.\n- Human-observed trajectory/state records normalized through the evaluator.\n- Aggregate shadow report with trigger misses/false triggers, false blocks, recovery, outcome, cost, and all hard violations.\n- Explicit promote/rollback recommendation; default profile remains untouched.\n\n## Exact owned targets\n- `evaluation/beads-skill/public-reports/shadow-v1.json`\n- `evaluation/beads-skill/public-reports/shadow-v1.md`\n\n## Dependencies and handoff\nStable task key: `t21`. Depends on: t20. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Evaluator provenance/schema checks; source/profile identity checks; state readback; report completeness; intentional stop/rollback rehearsal.\n\n## Non-goals\n- No default-profile promotion.\n- No high-risk/protected/remote work.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase J. Exclusive owned targets: evaluation/beads-skill/public-reports/shadow-v1.json; evaluation/beads-skill/public-reports/shadow-v1.md. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T21-001: Every shadow run uses the isolated final-name profile and exact Task-20 source hash; default-profile source remains unchanged.\nAC-T21-002: All tracker/repository effects are human-observed, within low-risk scope, and independently read back.\nAC-T21-003: The report includes complete denominators and every false trigger, missed trigger, rationalization, recovery failure, cost, and hard-boundary event.\nAC-T21-004: Any hard safety violation, unresolved recovery defect, or threshold failure produces a rollback/not-promote recommendation.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-j"
+      ],
+      "metadata": {
+        "stable_task_key": "t21",
+        "phase": "J",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "evaluation/beads-skill/public-reports/shadow-v1.json",
+          "evaluation/beads-skill/public-reports/shadow-v1.md"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    },
+    {
+      "key": "t22",
+      "title": "Make final v1 review and release decision",
+      "type": "task",
+      "priority": 1,
+      "estimate": 360,
+      "description": "## Background and purpose\nServe as the sole v1 release sink. Audit all child evidence, re-run deterministic gates, verify source/profile hashes and rollback, then record an explicit promote or reject decision. Promotion requires explicit human approval and only then may replace the active default-profile skill.\n\n## Required deliverables\n- Traceable release evidence index covering every epic/PRD acceptance behavior and child result.\n- Fresh deterministic verification and immutable candidate/report hashes.\n- Adversarial architecture/safety review focused on false guarantees, recovery, output secrecy, ownership, and authority.\n- Explicit PROMOTE or REJECT/ROLLBACK record with reasons, known limitations, and post-v1 follow-ups separated from v1.\n\n## Exact owned targets\n- `docs/plans/2026-09-02-hermes-beads-skill/release-decision-v1.md`\n- `evaluation/beads-skill/public-reports/release-v1.{json,md}`\n\n## Dependencies and handoff\nStable task key: `t22`. Depends on: t21. Consume predecessor artifacts by immutable path/hash and validate them before work; do not silently reinterpret frozen contracts.\n\n## Binding architecture and safety constraints\n- Beads is the durable source of truth; `bd prime` and live command help govern CLI syntax. Never access Dolt tables directly.\n- The parent/coordinator is the sole lifecycle writer in swarms. Workers are read-only through safe transports, depth zero, and distrusted until independent verification.\n- Stateful multi-issue/recovery guarantees belong in the Python coordinator, not prose. All effects use canonical identity, write-ahead intent, exact readback, and typed conflict/unknown outcomes.\n- Secrets and ambiguous credential-shaped content must not reach controlled model-visible output, disk artifacts, logs, issue records, or results. Plugin-free Hermes child pre-interception is a disclosed release-blocking limitation.\n- Production, spend, destructive, secret, push, Dolt-remote, and other protected effects remain direct non-reusable HUMAN_ACTION_REQUIRED actions. Parent-attested records settle design decisions only.\n- Do not commit, push, sync, promote, mutate the default Hermes profile, or perform protected/remote effects unless current explicit authority permits it.\n\n## Required source contracts\nUse the immutable source manifest produced at `docs/plans/2026-09-02-hermes-beads-skill/source-baseline-v1.json`; verify its hash before relying on it. Runtime CLI behavior comes from `bd prime` plus command-specific live help. Baselines are Beads v1.2.2 / commit `6c124203e771433a3550c348771a5b5e27fd3c21` and Hermes v0.21.0 / commit `21b2095d`. This issue text, its acceptance criteria, predecessor artifacts, and live command contracts are sufficient execution context; chat history and the planning documents are not required.\n\n## Required verification\n- Full deterministic repository suite; graph/dependency audit; release report/schema/traceability verification; isolated rollback rehearsal; fresh-session source-hash check only after approval.\n\n## Non-goals\n- No automatic approval.\n- No hook companion or epic-builder disposition in v1.\n- No protected/remote action without direct current-harness authority.\n\n## Recovery and handoff\nOn failure, preserve exact inputs, hashes, partial artifacts, command/result status, and the next safe action. Never delete, reset, rewrite, or mark complete merely to escape an unknown/conflict state. A fresh agent must be able to continue from this issue and its immutable artifacts without consulting chat history.\n",
+      "design": "Phase Release. Exclusive owned targets: docs/plans/2026-09-02-hermes-beads-skill/release-decision-v1.md; evaluation/beads-skill/public-reports/release-v1.{json,md}. Implement the approved Hermes-first, plugin-free v1 architecture exactly; change a frozen upstream contract only through an explicit dependency/invalidation decision.",
+      "acceptance_criteria": "AC-T22-001: Every required child is closed with schema-valid evidence and every epic acceptance behavior maps to an independently checked result.\nAC-T22-002: The implementation graph has no cycles/orphans, this issue is the sole required sink, and no post-v1 decision blocks v1 closure.\nAC-T22-003: Fresh deterministic gates and frozen paired/shadow thresholds pass with zero hard safety violations; unavailable or stale evidence blocks promotion.\nAC-T22-004: Promotion occurs only after explicit human approval and fresh default-profile source-hash verification; rejection preserves/restores the upstream rollback pointer.\nAC-T22-005: Release records disclose the plugin-free Hermes pre-interception limitation and all residual risks without claiming unsupported guarantees.",
+      "labels": [
+        "hermes-beads-v1",
+        "phase-release"
+      ],
+      "metadata": {
+        "stable_task_key": "t22",
+        "phase": "Release",
+        "required": true,
+        "release_blocking": true,
+        "owned_paths": [
+          "docs/plans/2026-09-02-hermes-beads-skill/release-decision-v1.md",
+          "evaluation/beads-skill/public-reports/release-v1.{json,md}"
+        ],
+        "plan_issue": "scc-a3d"
+      },
+      "spec_id": "hermes-beads-skill-v1",
+      "parent_key": "epic"
+    }
+  ],
+  "edges": [
+    {
+      "from_key": "t03",
+      "to_key": "t02",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t04",
+      "to_key": "t03",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t05",
+      "to_key": "t03",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t06",
+      "to_key": "t03",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t07",
+      "to_key": "t03",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t08",
+      "to_key": "t06",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t08",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t09",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t10",
+      "to_key": "t06",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t10",
+      "to_key": "t08",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t10",
+      "to_key": "t09",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t11",
+      "to_key": "t05",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t11",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t11",
+      "to_key": "t08",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t12",
+      "to_key": "t04",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t12",
+      "to_key": "t06",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t12",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t12",
+      "to_key": "t08",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t13",
+      "to_key": "t08",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t13",
+      "to_key": "t10",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t13",
+      "to_key": "t11",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t13",
+      "to_key": "t12",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t14",
+      "to_key": "t04",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t14",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t14",
+      "to_key": "t12",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t15",
+      "to_key": "t05",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t15",
+      "to_key": "t11",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t06",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t08",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t09",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t10",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t11",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t12",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t16",
+      "to_key": "t13",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t17",
+      "to_key": "t02",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t17",
+      "to_key": "t07",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t18",
+      "to_key": "t14",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t18",
+      "to_key": "t15",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t18",
+      "to_key": "t16",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t18",
+      "to_key": "t17",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t19",
+      "to_key": "t03",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t20",
+      "to_key": "t18",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t20",
+      "to_key": "t19",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t21",
+      "to_key": "t20",
+      "type": "blocks"
+    },
+    {
+      "from_key": "t22",
+      "to_key": "t21",
+      "type": "blocks"
+    }
+  ]
+}

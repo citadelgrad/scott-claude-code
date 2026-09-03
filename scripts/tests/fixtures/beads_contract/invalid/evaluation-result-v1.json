@@ -1,0 +1,31 @@
+{
+  "__unknown__": true,
+  "aggregate_metrics": [],
+  "applicable_steps": [],
+  "boundary_items": [],
+  "compliance_items": [],
+  "control_id": null,
+  "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "failure_classification": null,
+  "harness": "x",
+  "harness_version": "x",
+  "model": "x",
+  "outcome_checks": [],
+  "provider": "x",
+  "repeat": 0,
+  "schema_version": "beads.evaluation-result.v1",
+  "seed": 0,
+  "skill_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "split": "development",
+  "task_id": "x",
+  "telemetry": {
+    "cost_microunits": null,
+    "latency_milliseconds": null,
+    "tokens": null,
+    "tool_calls": null
+  },
+  "trajectory_events": [],
+  "treatment": "no_skill",
+  "trigger_evidence": [],
+  "verifier_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

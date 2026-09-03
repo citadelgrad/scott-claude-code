@@ -1,0 +1,17 @@
+{
+  "__unknown__": true,
+  "argv_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "error_code": null,
+  "exit_code": null,
+  "finished_at": "2026-09-03T12:00:00.000000Z",
+  "profile": "hermetic",
+  "redaction_count": 0,
+  "schema_version": "beads.safe-command-result.v1",
+  "signal": null,
+  "started_at": "2026-09-03T12:00:00.000000Z",
+  "status": "SUCCESS",
+  "stderr_bytes": null,
+  "stderr_log": null,
+  "stdout_bytes": null,
+  "stdout_log": null
+}

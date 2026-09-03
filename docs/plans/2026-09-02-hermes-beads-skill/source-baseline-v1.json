@@ -1,0 +1,225 @@
+{
+  "schema_version": "hermes-beads-source-baseline.v1",
+  "temporal_cutoff": "2026-09-02",
+  "repository_base": {
+    "commit": "2914cdbccc35a4c73023f3302ed93f5f567c28b4",
+    "status_at_capture": "planning artifacts untracked; tracked tree clean"
+  },
+  "runtime_baselines": {
+    "beads": {
+      "version": "1.2.2",
+      "commit": "6c124203e771433a3550c348771a5b5e27fd3c21",
+      "immutable_root": "https://github.com/gastownhall/beads/tree/6c124203e771433a3550c348771a5b5e27fd3c21",
+      "canonical_runtime_guidance": [
+        "bd prime",
+        "bd <command> --help"
+      ],
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Beads Contributors",
+      "license_source": "https://raw.githubusercontent.com/gastownhall/beads/6c124203e771433a3550c348771a5b5e27fd3c21/LICENSE",
+      "skill_source": "https://raw.githubusercontent.com/gastownhall/beads/6c124203e771433a3550c348771a5b5e27fd3c21/plugins/beads/skills/beads/SKILL.md",
+      "load_bearing_claims": [
+        "bd prime and command-specific live help are the CLI reference source of truth",
+        "the local Dolt database is issue-state authority; JSONL is not the canonical synchronization channel",
+        "bd ready means open and blocker-free, with in-progress, blocked, deferred, and hooked issues excluded",
+        "native claim is not treated as target-side run fencing",
+        "successful bd close invocation alone is not affirmative gate evidence",
+        "agents do not initialize a workspace without explicit human authority"
+      ],
+      "tag": "v1.2.2",
+      "tag_object_sha": "8ed120b1b3afdb75345719c2d3fef07a81860ab8",
+      "identity_citations": [
+        "https://api.github.com/repos/gastownhall/beads/git/ref/tags/v1.2.2",
+        "https://api.github.com/repos/gastownhall/beads/git/tags/8ed120b1b3afdb75345719c2d3fef07a81860ab8",
+        "https://github.com/gastownhall/beads/commit/6c124203e771433a3550c348771a5b5e27fd3c21"
+      ],
+      "release_scope": "v1.2.2 is a recovery release re-releasing the tested v1.1.2 line; later v1.2.x work leases, event journal, sync federation, HTTP API server, and provenance-event designs are absent.",
+      "sync_contract": "The local Dolt database is authoritative. refs/dolt/data is the cross-machine sync channel; .beads/issues.jsonl is a passive export.",
+      "ready_contract": "bd ready returns open issues with no active blockers and excludes in-progress, blocked, deferred, and hooked issues.",
+      "known_limitations": [
+        {
+          "id": "ready-claim-fencing",
+          "claim": "Pinned source describes ready --claim as atomic, but v1.2.2 issue #5998 reports concurrent duplicate receipt. Treat native claim as insufficient cross-run fencing; require cooperative run identity, exact readback, and conflict reconciliation.",
+          "citations": [
+            "https://github.com/gastownhall/beads/blob/6c124203e771433a3550c348771a5b5e27fd3c21/cmd/bd/ready.go#L35-L36",
+            "https://github.com/gastownhall/beads/issues/5998"
+          ]
+        },
+        {
+          "id": "close-gate-fail-open",
+          "claim": "The pinned close implementation can warn and continue when a machine-checkable gate cannot be evaluated. A successful bd close process is not sufficient evidence that every gate passed.",
+          "citations": [
+            "https://github.com/gastownhall/beads/blob/6c124203e771433a3550c348771a5b5e27fd3c21/cmd/bd/close.go#L443-L484"
+          ]
+        }
+      ],
+      "attribution_requirement": "Retain the Beads copyright and MIT permission notice in copied or substantial adaptations; identify gastownhall/beads and the pinned commit."
+    },
+    "hermes": {
+      "version": "0.21.0 (2026.8.31)",
+      "commit": "21b2095d00a98b8ad7b5c60b10587619c852cdb8",
+      "immutable_root": "https://github.com/NousResearch/hermes-agent/tree/21b2095d00a98b8ad7b5c60b10587619c852cdb8",
+      "authoritative_docs": "https://hermes-agent.nousresearch.com/docs",
+      "hooks_docs": "https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks/",
+      "tools_docs": "https://hermes-agent.nousresearch.com/docs/reference/tools-reference/",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Nous Research",
+      "license_source": "https://raw.githubusercontent.com/NousResearch/hermes-agent/21b2095d/LICENSE",
+      "observed_config": {
+        "model.default": "gpt-5.6-sol",
+        "model.provider": "openai-codex",
+        "delegation.max_iterations": 250,
+        "delegation.child_timeout_seconds": 0,
+        "delegation.max_concurrent_children": 10,
+        "delegation.model": null,
+        "delegation.provider": null
+      },
+      "load_bearing_claims": [
+        "delegate_task children have separate conversation contexts and require explicit task context",
+        "top-level delegation is asynchronous but process-local and is not a durable restart-surviving executor",
+        "documented default child concurrency is three but live configuration is authoritative; observed live maximum is ten",
+        "child context isolation does not guarantee independent writable filesystems; writing lanes need worktrees or equivalent isolation",
+        "Python coordinator code cannot directly invoke the model-facing delegate_task tool",
+        "profiles isolate configuration, sessions, skills, plugins, and memory"
+      ],
+      "identity_kind": "approved post-release package snapshot",
+      "release_tag": "v2026.8.31",
+      "release_tag_commit": "29112bef099274229cadff79cdff7bf7b99c4b77",
+      "identity_warning": "The approved commit reports package version 0.21.0 but is not the commit targeted by the v2026.8.31 release tag.",
+      "identity_citations": [
+        "https://api.github.com/repos/NousResearch/hermes-agent/commits/21b2095d",
+        "https://raw.githubusercontent.com/NousResearch/hermes-agent/21b2095d00a98b8ad7b5c60b10587619c852cdb8/pyproject.toml",
+        "https://api.github.com/repos/NousResearch/hermes-agent/git/ref/tags/v2026.8.31"
+      ],
+      "attribution_requirement": "Retain the Nous Research copyright and MIT permission notice for copied or substantially adapted software or documentation; cite the immutable commit."
+    },
+    "agent_skills": {
+      "specification_url": "https://agentskills.io/specification",
+      "captured_on": "2026-09-02",
+      "load_bearing_claims": [
+        "a skill directory requires SKILL.md; scripts, references, and assets are optional",
+        "SKILL.md requires YAML frontmatter with name and description followed by Markdown",
+        "metadata is a mapping from string keys to string values",
+        "SKILL.md should remain below 500 lines and approximately 5000 tokens",
+        "references should be one hop from SKILL.md for progressive disclosure",
+        "skills-ref validate is the reference validation command"
+      ],
+      "snapshot_commit": "69ef37e9424c0a7ea9dd2293b559e43ec8176379",
+      "immutable_spec_url": "https://raw.githubusercontent.com/agentskills/agentskills/69ef37e9424c0a7ea9dd2293b559e43ec8176379/docs/specification.mdx",
+      "code_license": "Apache-2.0",
+      "documentation_license": "CC-BY-4.0",
+      "origin_attribution": "The format was originally developed by Anthropic and released as an open standard.",
+      "attribution_requirement": "Attribute adapted specification documentation to Agent Skills/Anthropic, link the immutable source and CC-BY-4.0 license, and indicate local changes. Preserve Apache-2.0 notices for copied validator code."
+    }
+  },
+  "observed_cli_contract_hashes": {
+    "algorithm": "sha256",
+    "normalization": "exact combined stdout/stderr bytes from the named command in the repository root",
+    "commands": {
+      "bd prime": "993713b7b4f06101731ee8e8efb3f0e692858c273525a91ae4bb8b3b053384ba",
+      "bd create --help": "d06e962277a4faaab8c8e5e9e59875bcca4a84aee26f03bfb47a42557e74ce74",
+      "bd update --help": "562e3f92ccc173e40c0a9a83302cd32b0cd961e33412b192352f1205583f2130",
+      "bd close --help": "ed1e73d5d8ff9714bdbeca9c57ab7cdd8eff66c5d0167fc3f76715be7faa2521",
+      "bd dep --help": "ec0134ef777218dd5fefc958e30079acb2f0a96aa451a6d5a22124f3e77d1943",
+      "bd ready --help": "7d485a5c4eb3505c1e2e4fa700ddbf80964a25c6fd047341a2ccfc9872b97393",
+      "bd show --help": "010c34cfe1bf28beedf9c90978979a957e612ce8bd8a56c5b47e2cdde5038179",
+      "bd human --help": "eef6aff710c947fb2e2ab297583d22049a2bc6c38715f5284a6ed4bf1666a61c",
+      "bd gate --help": "16959572cdfc30b030828c6ae440f42933872fef4e876ae14603ce0f8d8e3bf0",
+      "bd worktree --help": "a32cd089a3c55e14fa90b9a3785eb7c0db2786f4c47a5f99954cd63a677a7fa9"
+    }
+  },
+  "local_source_map": [
+    {
+      "path": "AGENTS.md",
+      "purpose": "repository Beads, TDD, quality-gate, environment, and authority rules"
+    },
+    {
+      "path": "plugins/beads-epic-builder/commands/epic-swarm.md",
+      "purpose": "existing waves, worktrees, checkpoints, manifests, spot checks, and failure behavior"
+    },
+    {
+      "path": "plugins/beads-epic-builder/agents/feature-builder.md",
+      "purpose": "existing worker workflow and stale assumptions to reconcile"
+    },
+    {
+      "path": "skills/delegate-first/SKILL.md",
+      "purpose": "isolation and independent-verification policy"
+    },
+    {
+      "path": "skills/acceptance-criteria/SKILL.md",
+      "purpose": "AC-before-create and testability rules"
+    },
+    {
+      "path": "skills/pas-pipeline/SKILL.md",
+      "purpose": "durable predefined execution boundary and PAS comparison"
+    },
+    {
+      "path": "skills/adversarial-reviewer/SKILL.md",
+      "purpose": "paired controls, evidence states, and deterministic gate policy"
+    },
+    {
+      "path": "plugins/review-panel/skills/review-panel/SKILL.md",
+      "purpose": "bounded artifacts, independent validation, continuation, and coverage honesty"
+    },
+    {
+      "path": "scripts/verify_orchestration_contracts.py",
+      "purpose": "orchestration component registry and context contracts"
+    },
+    {
+      "path": "scripts/verify_skills_distribution.py",
+      "purpose": "portable distribution, metadata, authorship, inventory, and drift gates"
+    }
+  ],
+  "mental_model_sources": [
+    {
+      "name": "Single Writer Principle",
+      "url": "https://mechanical-sympathy.blogspot.com/2011/09/single-writer-principle.html",
+      "design_consequence": "one parent/coordinator owns lifecycle mutation"
+    },
+    {
+      "name": "MIT Mathematics for Computer Science: DAG scheduling",
+      "url": "https://ocw.mit.edu/courses/6-042j-mathematics-for-computer-science-spring-2015/mit6_042js15_session17.pdf",
+      "design_consequence": "dispatch only fresh blocker-free ready fronts"
+    },
+    {
+      "name": "The Chubby lock service",
+      "url": "https://research.google.com/archive/chubby-osdi06.pdf",
+      "design_consequence": "ownership uncertainty and fencing identities are explicit"
+    },
+    {
+      "name": "Making retries safe with idempotent APIs",
+      "url": "https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/",
+      "design_consequence": "caller-stable semantic operation identity precedes effects"
+    },
+    {
+      "name": "Transactional Outbox",
+      "url": "https://microservices.io/patterns/data/transactional-outbox.html",
+      "design_consequence": "filesystem and Beads dual writes are reconciled, not falsely called atomic"
+    },
+    {
+      "name": "W3C PROV-DM",
+      "url": "https://www.w3.org/TR/prov-dm/",
+      "design_consequence": "results bind entities, activities, actors, and immutable evidence"
+    }
+  ],
+  "version_drift_policy": {
+    "on_every_mutating_session": [
+      "run bd prime",
+      "resolve the exact Beads workspace",
+      "read command-specific live help before using uncertain syntax"
+    ],
+    "doctor_behavior": "Resolve executable identity; capture bd version, bd where, bd prime, command-specific help, Hermes version/commit, live delegate_task schema, and configured concurrency. Stop affected mutation with UNSUPPORTED_BD_VERSION or CLI_CONTRACT_DRIFT when a relied-on capability conflicts. Treat missing Hermes conformance as unsupported, not degraded success.",
+    "update_behavior": "Any accepted Beads, Hermes, or Agent Skills snapshot change creates a reviewed manifest revision and invalidates affected fixtures and baselines. Reject br/beads_rust substitution and never use compatibility bypass flags as normal operation.",
+    "prerelease_policy": "Do not adopt prerelease Beads or Hermes behavior as a v1 baseline without a separately reviewed baseline revision."
+  },
+  "known_source_issues": [
+    {
+      "id": "identity-hermes-tag-mismatch",
+      "resolution": "Represent 21b2095d00a98b8ad7b5c60b10587619c852cdb8 as the approved package snapshot, never as the release-tag commit."
+    },
+    {
+      "id": "beads-ready-claim-fencing",
+      "resolution": "Require cooperative ownership identity, readback, and conflict reconciliation around native claim."
+    }
+  ]
+}

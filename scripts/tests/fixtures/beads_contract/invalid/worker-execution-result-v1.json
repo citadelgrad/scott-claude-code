@@ -1,0 +1,35 @@
+{
+  "__unknown__": true,
+  "acceptance_evidence": [],
+  "artifacts": [],
+  "attempt_id": "attempt-001",
+  "blockers": [],
+  "cancellation_reason": null,
+  "changes": {
+    "outside_allowed_scope": [],
+    "paths": []
+  },
+  "errors": [],
+  "integration_mode": "patch_package",
+  "issue_id": "scc-x",
+  "lane_state": {
+    "dirty": false,
+    "tracked_diff_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "untracked_inventory_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "packet_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "repository": {
+    "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "branch": "x",
+    "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "worktree": "/tmp/x"
+  },
+  "residual_risks": [],
+  "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
+  "schema_version": "beads.worker-execution-result.v1",
+  "skipped_checks": [],
+  "status": "completed",
+  "summary": "x",
+  "verification": [],
+  "worker_frozen_artifact": null
+}
