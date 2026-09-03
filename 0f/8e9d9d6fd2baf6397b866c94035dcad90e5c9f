@@ -1,0 +1,29 @@
+scripts/tests/beads_contract/test_operation_result.py
+  s_11993f820757c2::t_6e767beaf6dc34 1-232
+scripts/tests/beads_contract/test_safe_bd.py
+  s_11993f820757c2::t_0995044f4ada47 1-259
+scripts/tests/beads_contract/test_schema_differential.py
+  s_11993f820757c2::t_99134d603249a7 1-268
+skills/beads/scripts/operation_result.py
+  s_11993f820757c2::t_83850a0275db2e 1-352
+skills/beads/scripts/safe_bd.py
+  s_11993f820757c2::t_944d1d6183eb2b 1-879
+skills/beads/scripts/validate_worker_packet.py
+  s_11993f820757c2::t_235a25731cbb82 1-268
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "0f8e9d9d6fd2baf6397b866c94035dcad90e5c9f",
+  "prompts": {},
+  "sessions": {
+    "s_11993f820757c2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06969-7c11-7862-9302-a3c13ebf804a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
