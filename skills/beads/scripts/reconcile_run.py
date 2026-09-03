@@ -42,9 +42,28 @@ def _ownership_status_without_creation(run_root: Path, issue_id: str) -> str:
         issue_dir = owner_root / state.issue_key(issue_id)
         if not issue_dir.exists():
             return "unheld"
-        return beads_ownership.OwnershipStore(run_root).inspect(issue_id).disposition
+        return (
+            beads_ownership.OwnershipStore.open_existing(run_root)
+            .inspect_readonly(issue_id)
+            .disposition
+        )
     except state.StateError as exc:
         raise _translate(exc) from exc
+
+
+def _reconcile_existing_ownership(run_root: Path, issue_id: str) -> tuple[str, bool]:
+    owner_root = run_root / "_ownership"
+    issue_dir = owner_root / state.issue_key(issue_id)
+    if not owner_root.exists() or not issue_dir.exists():
+        return "unheld", False
+    current_missing = not (issue_dir / "current.json").exists()
+    try:
+        result = beads_ownership.OwnershipStore.open_existing(run_root).inspect(
+            issue_id
+        )
+    except state.StateError as exc:
+        raise _translate(exc) from exc
+    return result.disposition, current_missing
 
 
 def status(run_directory: Path) -> ReconciliationPlan:
@@ -52,43 +71,57 @@ def status(run_directory: Path) -> ReconciliationPlan:
     run = Path(run_directory)
     try:
         state.validate_owner_directory(run)
-        manifest = state.load_run_manifest(run)
         state.run_size(run)
-        journal = state.OperationJournal(run)
-        journal_state = journal.read()
-        if journal_state.torn_tail is not None:
-            return ReconciliationPlan(
-                "manual_decision_required",
-                manifest["run_id"],
-                None,
-                "torn_tail",
-                _ownership_status_without_creation(
-                    run.parent, manifest["root_issue_id"]
-                ),
-                "recover_journal_tail_under_run_lock",
+        with state.exclusive_lock(run / "run.lock", root=run, create=False):
+            manifest = state.load_run_manifest(run)
+            journal = state.OperationJournal(run)
+            journal_state = journal.read()
+            if journal_state.torn_tail is not None:
+                return ReconciliationPlan(
+                    "manual_decision_required",
+                    manifest["run_id"],
+                    None,
+                    "torn_tail",
+                    _ownership_status_without_creation(
+                        run.parent, manifest["root_issue_id"]
+                    ),
+                    "recover_journal_tail_under_run_lock",
+                )
+            journal_status = _journal_health(journal_state.records)
+            if journal_status in {"unknown", "conflict"}:
+                return ReconciliationPlan(
+                    "manual_decision_required",
+                    manifest["run_id"],
+                    None,
+                    journal_status,
+                    _ownership_status_without_creation(
+                        run.parent, manifest["root_issue_id"]
+                    ),
+                    "inspect_preserved_journal_evidence",
+                )
+            reference = state.CheckpointStore.open_existing(run, journal).current(
+                rebuild_pointer=False
             )
-        reference = state.CheckpointStore(run, journal).current(rebuild_pointer=False)
-        ownership = _ownership_status_without_creation(
-            run.parent, manifest["root_issue_id"]
-        )
-        dangling = _dangling_prepared(journal_state.records)
-        if dangling:
+            ownership = _ownership_status_without_creation(
+                run.parent, manifest["root_issue_id"]
+            )
+            if journal_status == "dangling_prepared":
+                return ReconciliationPlan(
+                    "manual_decision_required",
+                    manifest["run_id"],
+                    reference.generation,
+                    "dangling_prepared",
+                    ownership,
+                    "execute_bound_recovery_probe",
+                )
             return ReconciliationPlan(
-                "manual_decision_required",
+                "consistent",
                 manifest["run_id"],
                 reference.generation,
-                "dangling_prepared",
+                "valid",
                 ownership,
-                "execute_bound_recovery_probe",
+                "continue_from_accepted_checkpoint",
             )
-        return ReconciliationPlan(
-            "consistent",
-            manifest["run_id"],
-            reference.generation,
-            "valid",
-            ownership,
-            "continue_from_accepted_checkpoint",
-        )
     except state.StateError as exc:
         raise _translate(exc) from exc
 
@@ -101,6 +134,28 @@ def _dangling_prepared(records: tuple[dict[str, Any], ...]) -> tuple[str, ...]:
         record["operation_id"] for record in records if record["phase"] == "RESOLUTION"
     }
     return tuple(sorted(prepared - resolved))
+
+
+def _journal_health(records: tuple[dict[str, Any], ...]) -> str:
+    """Derive persistent semantic health from complete journal records."""
+    terminal = [
+        record
+        for record in records
+        if (
+            record["phase"] == "CORRUPT_TAIL"
+            or (
+                record["phase"] == "RESOLUTION"
+                and record["status"] in {"UNKNOWN", "CONFLICT"}
+            )
+        )
+    ]
+    if any(record["status"] == "CONFLICT" for record in terminal):
+        return "conflict"
+    if terminal:
+        return "unknown"
+    if _dangling_prepared(records):
+        return "dangling_prepared"
+    return "valid"
 
 
 def _preserve_journal(run: Path, raw: bytes) -> tuple[Path, str]:
@@ -119,22 +174,134 @@ def _preserve_journal(run: Path, raw: bytes) -> tuple[Path, str]:
     return path, digest
 
 
-def _filesystem_classification(probe: dict[str, Any]) -> str:
+def _filesystem_observation(
+    run: Path, probe: dict[str, Any]
+) -> tuple[str, str | None, Path | None, str | None]:
     if probe.get("probe_type") != "filesystem_identity":
-        return "insufficient_observation"
+        return "insufficient_observation", None, None, None
     target = Path(probe["target_identity"])
     try:
-        if target.is_symlink() or not target.is_file():
-            return "prestate_unchanged"
-        raw = target.read_bytes()
-    except OSError:
-        return "insufficient_observation"
+        target.relative_to(run.parent)
+    except ValueError:
+        return "insufficient_observation", None, None, None
+    try:
+        checked = state.validate_owner_file(target, root=run.parent)
+        raw = checked.read_bytes()
+    except FileNotFoundError:
+        if probe["expected_before_sha256"] == state.GENESIS_SHA256:
+            return "prestate_unchanged", state.GENESIS_SHA256, None, None
+        return "insufficient_observation", None, None, None
+    except (OSError, state.StateError):
+        return "insufficient_observation", None, None, None
     digest = state.sha256_bytes(raw)
     if digest == probe["intended_after_sha256"]:
-        return "intended_effect_present"
-    if digest == probe["expected_before_sha256"]:
-        return "prestate_unchanged"
-    return "conflicting_effect"
+        classification = "intended_effect_present"
+    elif digest == probe["expected_before_sha256"]:
+        classification = "prestate_unchanged"
+    else:
+        classification = "conflicting_effect"
+    return classification, digest, checked, digest
+
+
+_CLASSIFICATION_STATUS = {
+    "intended_effect_present": "APPLIED",
+    "prestate_unchanged": "NOT_APPLIED",
+    "conflicting_effect": "CONFLICT",
+    "insufficient_observation": "UNKNOWN",
+}
+
+
+def _resolution_from_observation(prepared: dict[str, Any], run: Path) -> dict[str, Any]:
+    classification, observed, evidence_path, evidence_sha = _filesystem_observation(
+        run, prepared["recovery_probe"]
+    )
+    status = _CLASSIFICATION_STATUS[classification]
+    return {
+        **prepared,
+        "phase": "RESOLUTION",
+        "timestamp": state.utc_timestamp(dt.datetime.now(dt.timezone.utc)),
+        "observed_post_state_sha256": observed,
+        "readback_evidence_path": str(evidence_path.resolve())
+        if evidence_path
+        else None,
+        "readback_evidence_sha256": evidence_sha,
+        "status": status,
+        "error": None
+        if status in {"APPLIED", "NOT_APPLIED"}
+        else {
+            "code": f"RECOVERY_{status}",
+            "template_id": "recovery_probe_result",
+            "field_path": "/recovery_probe",
+            "parameters": [],
+        },
+    }
+
+
+def _validate_resolution_evidence(run: Path, value: dict[str, Any]) -> bool:
+    classification, observed, target, _target_sha = _filesystem_observation(
+        run, value["recovery_probe"]
+    )
+    if _CLASSIFICATION_STATUS[classification] != value["status"]:
+        return False
+    if value["observed_post_state_sha256"] != observed:
+        return False
+    evidence_path = value["readback_evidence_path"]
+    evidence_sha = value["readback_evidence_sha256"]
+    if target is None:
+        return evidence_path is None and evidence_sha is None
+    if not isinstance(evidence_path, str) or not isinstance(evidence_sha, str):
+        return False
+    evidence = Path(evidence_path)
+    if evidence.resolve() != target.resolve():
+        return False
+    try:
+        raw = state.validate_owner_file(evidence, root=run.parent).read_bytes()
+    except (OSError, state.StateError):
+        return False
+    return state.sha256_bytes(raw) == evidence_sha == observed
+
+
+def _validate_checkpoint_acceptance(
+    run: Path, value: dict[str, Any], records: tuple[dict[str, Any], ...]
+) -> None:
+    accepted = [
+        record for record in records if record["phase"] == "CHECKPOINT_ACCEPTED"
+    ]
+    expected_generation = accepted[-1]["generation"] + 1 if accepted else 1
+    expected_predecessor = (
+        accepted[-1]["checkpoint_sha256"] if accepted else state.GENESIS_SHA256
+    )
+    if value["generation"] != expected_generation:
+        raise ReconciliationError("CHECKPOINT_GENERATION_INVALID")
+    if value["expected_pre_state_sha256"] != expected_predecessor:
+        raise ReconciliationError("CHECKPOINT_PREDECESSOR_INVALID")
+    path = Path(value["checkpoint_path"])
+    try:
+        checkpoint_raw = state.validate_owner_file(path, root=run).read_bytes()
+        checkpoint = schema_runtime.strict_json_loads(
+            checkpoint_raw, max_bytes=state.MAX_MANIFEST_BYTES
+        )
+        schema_runtime.require_valid("run-checkpoint-v1.schema.json", checkpoint)
+    except (
+        OSError,
+        state.StateError,
+        schema_runtime.JsonLoadFailure,
+        schema_runtime.ValidationFailure,
+    ) as exc:
+        raise ReconciliationError("ACCEPTED_CHECKPOINT_MISSING") from exc
+    digest = state.sha256_bytes(checkpoint_raw)
+    if (
+        digest != value["checkpoint_sha256"]
+        or digest != value["immutable_input_sha256"]
+        or value["immutable_input_path"] != str(path.resolve())
+        or checkpoint_raw != state.canonical_bytes(checkpoint)
+        or checkpoint["run_id"] != run.name
+        or checkpoint["generation"] != value["generation"]
+        or checkpoint["previous_checkpoint_sha256"] != expected_predecessor
+        or value["recovery_probe"]["intended_after_sha256"] != digest
+        or value["recovery_probe"]["target_identity"] != str(path.resolve())
+    ):
+        raise ReconciliationError("ACCEPTED_CHECKPOINT_HASH_MISMATCH")
 
 
 def _replace_journal(run: Path, raw: bytes) -> None:
@@ -237,24 +404,30 @@ def _repair_torn_tail(
 
     phase = value["phase"]
     if phase == "PREPARED":
-        # Normalize the complete intent, but filesystem-only recovery cannot
-        # fabricate a resolution for a non-filesystem probe.
         _replace_journal(run, raw + b"\n")
-        classification = _filesystem_classification(value["recovery_probe"])
-        if classification == "insufficient_observation":
-            return "dangling_prepared", ("journal_tail_normalized",)
-        return "dangling_prepared", ("journal_tail_normalized",)
+        normalized = state.OperationJournal(run)
+        resolution = _resolution_from_observation(value, run)
+        normalized.append(resolution)
+        return (
+            "unknown"
+            if resolution["status"] == "UNKNOWN"
+            else "conflict"
+            if resolution["status"] == "CONFLICT"
+            else "valid",
+            ("journal_tail_normalized", "prepared_operation_resolved"),
+        )
     if phase == "RESOLUTION":
-        mapping = {
-            "intended_effect_present": "APPLIED",
-            "prestate_unchanged": "NOT_APPLIED",
-            "conflicting_effect": "CONFLICT",
-            "insufficient_observation": "UNKNOWN",
-        }
-        if (
-            mapping[_filesystem_classification(value["recovery_probe"])]
-            != value["status"]
-        ):
+        prepared = [
+            record
+            for record in parsed.records
+            if record["phase"] == "PREPARED"
+            and record["operation_id"] == value["operation_id"]
+        ]
+        immutable_matches = len(prepared) == 1 and all(
+            value.get(field) == prepared[0].get(field)
+            for field in state.OperationJournal._RESOLUTION_BINDING_FIELDS
+        )
+        if not immutable_matches or not _validate_resolution_evidence(run, value):
             event = _corrupt_tail_event(
                 run,
                 parsed.last_sha256,
@@ -263,18 +436,12 @@ def _repair_torn_tail(
                 parsed.torn_offset or 0,
             )
             event["status"] = "CONFLICT"
-            event["error"]["code"] = "JOURNAL_RESOLUTION_PROBE_MISMATCH"
+            event["error"]["code"] = "JOURNAL_RESOLUTION_EVIDENCE_MISMATCH"
             prefix = raw[: parsed.torn_offset]
             _replace_journal(run, prefix + state.canonical_bytes(event))
             return "conflict", ("journal_tail_preserved", "corrupt_tail_recorded")
     elif phase == "CHECKPOINT_ACCEPTED":
-        path = Path(value["checkpoint_path"])
-        try:
-            checkpoint_raw = state.validate_owner_file(path, root=run).read_bytes()
-        except state.StateError as exc:
-            raise ReconciliationError("ACCEPTED_CHECKPOINT_MISSING") from exc
-        if state.sha256_bytes(checkpoint_raw) != value["checkpoint_sha256"]:
-            raise ReconciliationError("ACCEPTED_CHECKPOINT_HASH_MISMATCH")
+        _validate_checkpoint_acceptance(run, value, parsed.records)
     elif phase == "CORRUPT_TAIL":
         path = Path(value["evidence_path"])
         try:
@@ -302,6 +469,8 @@ def recover(run_directory: Path) -> ReconciliationPlan:
             journal = state.OperationJournal(run)
             journal_status, tail_repairs = _repair_torn_tail(run, journal)
             repairs.extend(tail_repairs)
+            if journal_status == "valid":
+                journal_status = _journal_health(journal.read().records)
             if journal_status in {"unknown", "conflict"}:
                 return ReconciliationPlan(
                     "manual_decision_required",
@@ -322,9 +491,11 @@ def recover(run_directory: Path) -> ReconciliationPlan:
                     raise
                 reference = store.current(rebuild_pointer=True)
                 repairs.append("checkpoint_pointer_rebuilt")
-            ownership = _ownership_status_without_creation(
+            ownership, ownership_repaired = _reconcile_existing_ownership(
                 run.parent, manifest["root_issue_id"]
             )
+            if ownership_repaired:
+                repairs.append("ownership_current_rebuilt")
             dangling = _dangling_prepared(journal.read().records)
             if dangling:
                 return ReconciliationPlan(

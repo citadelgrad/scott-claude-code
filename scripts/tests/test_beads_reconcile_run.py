@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
 import json
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -59,7 +61,27 @@ def _run_fixture(tmp_path: Path):
         "created_at": "2026-09-03T12:00:00.000000Z",
     }
     state.CheckpointStore(run, journal).accept(checkpoint)
+    state.create_owner_file(run / "run.lock", root=run)
     return state, root, run
+
+
+def _path_snapshot(root: Path) -> dict[str, tuple[int, int, int, int, str | None]]:
+    snapshot: dict[str, tuple[int, int, int, int, str | None]] = {}
+    for path in [root, *sorted(root.rglob("*"))]:
+        metadata = path.stat(follow_symlinks=False)
+        digest = (
+            hashlib.sha256(path.read_bytes()).hexdigest()
+            if stat.S_ISREG(metadata.st_mode)
+            else None
+        )
+        snapshot[str(path.relative_to(root))] = (
+            metadata.st_ino,
+            stat.S_IMODE(metadata.st_mode),
+            metadata.st_mtime_ns,
+            metadata.st_nlink,
+            digest,
+        )
+    return snapshot
 
 
 def test_status_validates_journal_checkpoint_manifest_and_ownership_without_mutation(
@@ -67,15 +89,60 @@ def test_status_validates_journal_checkpoint_manifest_and_ownership_without_muta
 ) -> None:
     _state, root, run = _run_fixture(tmp_path)
     reconcile = importlib.import_module("reconcile_run")
-    before = {path: path.read_bytes() for path in run.rglob("*") if path.is_file()}
+    before = _path_snapshot(run.parent)
     plan = reconcile.status(run)
-    after = {path: path.read_bytes() for path in run.rglob("*") if path.is_file()}
+    after = _path_snapshot(run.parent)
     assert plan.disposition == "consistent"
     assert plan.accepted_generation == 1
     assert plan.next_safe_action == "continue_from_accepted_checkpoint"
     assert before == after
     assert plan.local_fencing_limit == "cooperative_local_filesystem_only"
     assert root.exists()
+
+
+def test_status_missing_lock_is_read_only_unknown(tmp_path: Path) -> None:
+    _state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    (run / "run.lock").unlink()
+    before = _path_snapshot(run.parent)
+
+    with pytest.raises(reconcile.ReconciliationError, match="LOCK_MISSING") as raised:
+        reconcile.status(run)
+
+    assert raised.value.status == "unknown"
+    assert _path_snapshot(run.parent) == before
+    assert not (run / "run.lock").exists()
+
+
+def test_status_rejects_wrong_mode_extra_file_without_mutation(tmp_path: Path) -> None:
+    _state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    extra = run / "unrelated.txt"
+    extra.write_text("unsafe mode", encoding="utf-8")
+    extra.chmod(0o644)
+    before = _path_snapshot(run.parent)
+
+    with pytest.raises(reconcile.ReconciliationError, match="PATH_MODE_INVALID"):
+        reconcile.status(run)
+
+    assert _path_snapshot(run.parent) == before
+
+
+def test_cli_status_missing_lock_does_not_create_any_path(tmp_path: Path) -> None:
+    _state, _root, run = _run_fixture(tmp_path)
+    (run / "run.lock").unlink()
+    before = _path_snapshot(run.parent)
+
+    result = subprocess.run(
+        [sys.executable, str(CLI), "status", "--run-dir", str(run), "--json"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 5
+    assert json.loads(result.stdout)["error_code"] == "LOCK_MISSING"
+    assert _path_snapshot(run.parent) == before
 
 
 def test_recover_rebuilds_only_stale_pointer_and_ignores_unaccepted_generation(
@@ -103,6 +170,30 @@ def test_recover_rebuilds_only_stale_pointer_and_ignores_unaccepted_generation(
     assert stray.exists()
 
 
+def test_recover_reconstructs_current_from_durable_ownership_history(
+    tmp_path: Path,
+) -> None:
+    state, root, run = _run_fixture(tmp_path)
+    ownership = importlib.import_module("beads_ownership")
+    reconcile = importlib.import_module("reconcile_run")
+    ownership.OwnershipStore(root).acquire(
+        issue_id="root",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+    )
+    owner_dir = root / "_ownership" / state.issue_key("root")
+    (owner_dir / "current.json").unlink()
+
+    plan = reconcile.recover(run)
+
+    assert plan.disposition == "safe_to_retry"
+    assert "ownership_current_rebuilt" in plan.repairs
+    assert (owner_dir / "current.json").exists()
+    assert reconcile.status(run).ownership_status == "held"
+
+
 def test_unparseable_tail_is_preserved_and_becomes_terminal_unknown(
     tmp_path: Path,
 ) -> None:
@@ -120,7 +211,202 @@ def test_unparseable_tail_is_preserved_and_becomes_terminal_unknown(
     records = state.OperationJournal(run).read().records
     assert records[-1]["phase"] == "CORRUPT_TAIL"
     assert records[-1]["status"] == "UNKNOWN"
-    assert reconcile.recover(run).repairs == ()
+    repaired_journal = journal.read_bytes()
+    repaired_evidence = evidence[0].read_bytes()
+
+    repeated = reconcile.recover(run)
+    assert repeated.disposition == "manual_decision_required"
+    assert repeated.journal_status == "unknown"
+    observed = reconcile.status(run)
+    assert observed.disposition == "manual_decision_required"
+    assert observed.journal_status == "unknown"
+    assert journal.read_bytes() == repaired_journal
+    assert evidence[0].read_bytes() == repaired_evidence
+
+
+def _torn_prepared(state, run: Path, *, probe_type: str = "filesystem_identity"):
+    input_path = run / "run.json"
+    input_sha = state.sha256_bytes(input_path.read_bytes())
+    target = run / "effect.json"
+    target.write_bytes(b'{"applied":true}\n')
+    target.chmod(0o600)
+    intended_sha = state.sha256_bytes(target.read_bytes())
+    identity = {
+        "schema": "beads.test-effect.v1",
+        "effect_type": "FILESYSTEM_TEST",
+        "target_identity": str(target.resolve()),
+        "immutable_input_sha256": input_sha,
+        "ownership_epoch": None,
+    }
+    return {
+        "schema_version": "beads.operation-journal-event.v1",
+        "operation_id": state.semantic_operation_id(identity),
+        "run_id": run.name,
+        "attempt_id": None,
+        "issue_id": None,
+        "ownership_epoch": None,
+        "effect_type": "FILESYSTEM_TEST",
+        "immutable_input_path": str(input_path.resolve()),
+        "immutable_input_sha256": input_sha,
+        "expected_pre_state_sha256": "0" * 64,
+        "recovery_probe": {
+            "schema_version": "beads.recovery-probe.v1",
+            "kind": "request",
+            "probe_type": probe_type,
+            "target_identity": str(target.resolve()),
+            "expected_before_sha256": "0" * 64,
+            "intended_after_identity": str(target.resolve()),
+            "intended_after_sha256": intended_sha,
+            "descriptor": [probe_type, "test"],
+            "timeout_seconds": 1,
+            "required_authority": "local_write",
+        },
+        "timestamp": "2026-09-03T12:01:00.000000Z",
+        "authority_class": "local_write",
+        "previous_event_sha256": state.OperationJournal(run).read().last_sha256,
+        "phase": "PREPARED",
+    }
+
+
+def test_torn_prepared_is_normalized_probed_and_resolved_once(tmp_path: Path) -> None:
+    state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    prepared = _torn_prepared(state, run)
+    with (run / "operations.jsonl").open("ab") as stream:
+        stream.write(state.canonical_payload_bytes(prepared))
+
+    first = reconcile.recover(run)
+
+    records = state.OperationJournal(run).read().records
+    assert [record["phase"] for record in records[-2:]] == ["PREPARED", "RESOLUTION"]
+    assert records[-1]["status"] == "APPLIED"
+    assert (
+        records[-1]["observed_post_state_sha256"]
+        == prepared["recovery_probe"]["intended_after_sha256"]
+    )
+    assert first.disposition == "safe_to_retry"
+    journal_bytes = (run / "operations.jsonl").read_bytes()
+    second = reconcile.recover(run)
+    assert second.disposition == "consistent"
+    assert (run / "operations.jsonl").read_bytes() == journal_bytes
+
+
+def test_torn_prepared_with_unsupported_probe_resolves_unknown(tmp_path: Path) -> None:
+    state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    prepared = _torn_prepared(state, run, probe_type="tracker_state")
+    with (run / "operations.jsonl").open("ab") as stream:
+        stream.write(state.canonical_payload_bytes(prepared))
+
+    plan = reconcile.recover(run)
+
+    records = state.OperationJournal(run).read().records
+    assert records[-1]["phase"] == "RESOLUTION"
+    assert records[-1]["status"] == "UNKNOWN"
+    assert plan.disposition == "manual_decision_required"
+
+
+@pytest.mark.parametrize("terminal_status", ["UNKNOWN", "CONFLICT"])
+def test_complete_terminal_resolution_remains_manual_across_status_and_recovery(
+    tmp_path: Path, terminal_status: str
+) -> None:
+    state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    journal = state.OperationJournal(run)
+    prepared = journal.append(_torn_prepared(state, run, probe_type="tracker_state"))
+    resolution = {
+        **prepared,
+        "phase": "RESOLUTION",
+        "timestamp": "2026-09-03T12:02:00.000000Z",
+        "observed_post_state_sha256": None,
+        "readback_evidence_path": None,
+        "readback_evidence_sha256": None,
+        "status": terminal_status,
+        "error": {
+            "code": f"RECOVERY_{terminal_status}",
+            "template_id": "recovery_probe_result",
+            "field_path": "/recovery_probe",
+            "parameters": [],
+        },
+    }
+    journal.append(resolution)
+    before = journal.path.read_bytes()
+
+    observed = reconcile.status(run)
+    first = reconcile.recover(run)
+    second = reconcile.recover(run)
+
+    expected = terminal_status.lower()
+    assert observed.disposition == "manual_decision_required"
+    assert observed.journal_status == expected
+    assert first.disposition == second.disposition == "manual_decision_required"
+    assert first.journal_status == second.journal_status == expected
+    assert journal.path.read_bytes() == before
+
+
+def test_torn_resolution_rejects_missing_or_false_readback_evidence(
+    tmp_path: Path,
+) -> None:
+    state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    journal = state.OperationJournal(run)
+    prepared = journal.append(_torn_prepared(state, run))
+    bogus = {
+        **prepared,
+        "phase": "RESOLUTION",
+        "timestamp": "2026-09-03T12:02:00.000000Z",
+        "previous_event_sha256": journal.read().last_sha256,
+        "observed_post_state_sha256": prepared["recovery_probe"][
+            "intended_after_sha256"
+        ],
+        "readback_evidence_path": str((run / "missing-evidence.json").resolve()),
+        "readback_evidence_sha256": "f" * 64,
+        "status": "APPLIED",
+        "error": None,
+    }
+    with journal.path.open("ab") as stream:
+        stream.write(state.canonical_payload_bytes(bogus))
+
+    plan = reconcile.recover(run)
+
+    assert plan.disposition == "manual_decision_required"
+    assert plan.journal_status == "conflict"
+    records = journal.read().records
+    assert records[-1]["phase"] == "CORRUPT_TAIL"
+    assert records[-1]["status"] == "CONFLICT"
+
+
+def test_torn_checkpoint_acceptance_validates_generation_predecessor(
+    tmp_path: Path,
+) -> None:
+    state, _root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    journal = state.OperationJournal(run)
+    first = state.CheckpointStore.open_existing(run, journal).current()
+    path = run / "checkpoints" / "000003.json"
+    value = {**first.value, "generation": 3, "previous_checkpoint_sha256": "f" * 64}
+    path.write_bytes(state.canonical_bytes(value))
+    path.chmod(0o600)
+    digest = state.sha256_bytes(path.read_bytes())
+    event = {
+        **journal.read().records[-1],
+        "operation_id": "e" * 64,
+        "previous_event_sha256": journal.read().last_sha256,
+        "generation": 3,
+        "checkpoint_path": str(path.resolve()),
+        "checkpoint_sha256": digest,
+        "immutable_input_path": str(path.resolve()),
+        "immutable_input_sha256": digest,
+        "expected_pre_state_sha256": "f" * 64,
+        "recovery_probe": state._filesystem_probe(str(path.resolve()), digest),
+    }
+    with journal.path.open("ab") as stream:
+        stream.write(state.canonical_payload_bytes(event))
+
+    with pytest.raises(
+        reconcile.ReconciliationError, match="CHECKPOINT_GENERATION_INVALID"
+    ):
+        reconcile.recover(run)
 
 
 def test_interior_corruption_and_accepted_checkpoint_tamper_fail_closed_without_repair(

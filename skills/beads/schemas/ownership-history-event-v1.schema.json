@@ -22,6 +22,13 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "record": {
+      "$ref": "urn:citadelgrad:scott-cc:beads:ownership-record:v1"
+    },
+    "record_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
     "run_id": {
       "pattern": "^run-[0-9a-f]{16}-[0-9]{8}T[0-9]{6}\\.[0-9]{6}Z-[A-Z2-7]{8}$",
       "type": "string"
@@ -54,6 +61,8 @@
     "epoch",
     "status",
     "token_sha256",
+    "record",
+    "record_sha256",
     "previous_event_sha256",
     "operation_id",
     "timestamp"

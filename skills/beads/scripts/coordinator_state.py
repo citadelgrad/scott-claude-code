@@ -322,6 +322,34 @@ def _exclusive_file(path: Path, mode: int = FILE_MODE) -> int:
         raise StateError("EXCLUSIVE_FILE_CREATE_FAILED") from exc
 
 
+def _read_and_fsync_existing_file(path: Path, *, root: Path, max_bytes: int) -> bytes:
+    """Validate and durably flush an existing regular file through one descriptor."""
+    checked = validate_owner_file(path, root=root)
+    try:
+        fd = os.open(checked, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        raise StateError("FILE_OPEN_FAILED") from exc
+    try:
+        _validate_owner(os.fstat(fd), mode=FILE_MODE, directory=False)
+        chunks: list[bytes] = []
+        remaining = max_bytes + 1
+        while remaining:
+            chunk = os.read(fd, min(remaining, 65_536))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > max_bytes:
+            raise StateError("ARTIFACT_TOO_LARGE")
+        os.fsync(fd)
+        return raw
+    except OSError as exc:
+        raise StateError("FILE_READ_OR_FSYNC_FAILED") from exc
+    finally:
+        os.close(fd)
+
+
 def atomic_write(
     path: Path,
     raw: bytes,
@@ -339,7 +367,7 @@ def atomic_write(
     name = temp_name or f".{target.name}.tmp"
     temp = guarded_path(target.parent, name)
     if temp.exists():
-        existing = validate_owner_file(temp, root=root).read_bytes()
+        existing = _read_and_fsync_existing_file(temp, root=root, max_bytes=max_bytes)
         if existing != raw:
             raise StateError("ATOMIC_TEMP_CONFLICT")
     else:
@@ -391,16 +419,18 @@ def exclusive_lock(
     *,
     root: Path,
     blocking: bool = True,
+    create: bool = True,
     hook: Callable[[str], None] = NOOP_HOOK,
 ) -> Iterator[None]:
     """Acquire a same-host POSIX advisory lock and validate its backing file."""
     target = guarded_path(root, path.absolute().relative_to(root.absolute()))
     try:
-        fd = os.open(
-            target,
-            os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0),
-            FILE_MODE,
-        )
+        flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        if create:
+            flags |= os.O_CREAT
+        fd = os.open(target, flags, FILE_MODE)
+    except FileNotFoundError as exc:
+        raise StateError("LOCK_MISSING", status="unknown") from exc
     except OSError as exc:
         raise StateError("LOCK_OPEN_FAILED", status="unknown") from exc
     try:
@@ -512,8 +542,9 @@ def recover_run_manifest(run_directory: Path) -> Path:
     suffix = temp.name.removeprefix("run.json.tmp-")
     if not BASE32_RE.fullmatch(suffix):
         raise StateError("RUN_MANIFEST_TEMP_CONFLICT")
-    validate_owner_file(temp, root=run_directory)
-    raw = schema_runtime.read_bounded(temp, MAX_MANIFEST_BYTES)
+    raw = _read_and_fsync_existing_file(
+        temp, root=run_directory, max_bytes=MAX_MANIFEST_BYTES
+    )
     value = schema_runtime.strict_json_loads(raw, max_bytes=MAX_MANIFEST_BYTES)
     schema_runtime.require_valid("run-manifest-v1.schema.json", value)
     if value["run_id"] != run_directory.name or raw != canonical_bytes(value):
@@ -558,6 +589,20 @@ def _read_canonical_lines(raw: bytes, schema_name: str) -> JournalRead:
 
 
 class OperationJournal:
+    _RESOLUTION_BINDING_FIELDS = (
+        "operation_id",
+        "run_id",
+        "attempt_id",
+        "issue_id",
+        "ownership_epoch",
+        "effect_type",
+        "immutable_input_path",
+        "immutable_input_sha256",
+        "expected_pre_state_sha256",
+        "recovery_probe",
+        "authority_class",
+    )
+
     def __init__(self, run_directory: Path) -> None:
         self.run_directory = validate_owner_directory(run_directory)
         self.path = self.run_directory / "operations.jsonl"
@@ -593,6 +638,13 @@ class OperationJournal:
         same_id = [
             record for record in state.records if record["operation_id"] == operation_id
         ]
+        if candidate.get("phase") == "RESOLUTION":
+            prepared = [record for record in same_id if record["phase"] == "PREPARED"]
+            if len(prepared) != 1 or any(
+                candidate.get(field) != prepared[0].get(field)
+                for field in self._RESOLUTION_BINDING_FIELDS
+            ):
+                raise StateError("OPERATION_RESOLUTION_MISMATCH")
         if same_id:
             same_phase = [
                 record
@@ -651,6 +703,20 @@ class CheckpointStore:
         self.directory = self.run_directory / "checkpoints"
         ensure_owner_directory(self.directory, root=self.run_directory)
 
+    @classmethod
+    def open_existing(
+        cls, run_directory: Path, journal: OperationJournal
+    ) -> "CheckpointStore":
+        instance = cls.__new__(cls)
+        instance.run_directory = validate_owner_directory(run_directory)
+        instance.journal = journal
+        if journal.run_directory != instance.run_directory:
+            raise StateError("JOURNAL_RUN_MISMATCH")
+        instance.directory = validate_owner_directory(
+            instance.run_directory / "checkpoints", root=instance.run_directory
+        )
+        return instance
+
     def _accepted(self) -> list[dict[str, Any]]:
         return [
             record
@@ -679,7 +745,7 @@ class CheckpointStore:
             path = Path(event["checkpoint_path"])
             if validate_owner_file(path, root=self.run_directory).read_bytes() != raw:
                 raise StateError("ACCEPTED_CHECKPOINT_HASH_MISMATCH")
-            current = self.current(rebuild_pointer=False)
+            current = self.current(rebuild_pointer=True)
             if current.generation != generation or current.generation_sha256 != digest:
                 raise StateError("CHECKPOINT_POINTER_STALE", status="unknown")
             return CheckpointRef(generation, path, digest, value)
@@ -813,15 +879,14 @@ def run_size(run_directory: Path) -> int:
     total = 0
     for current, directories, files in os.walk(run_directory, followlinks=False):
         current_path = Path(current)
+        _validate_owner(_lstat(current_path), mode=DIR_MODE, directory=True)
         for name in directories:
             metadata = _lstat(current_path / name)
-            if stat.S_ISLNK(metadata.st_mode):
-                raise StateError("PATH_ALIAS_INVALID")
+            _validate_owner(metadata, mode=DIR_MODE, directory=True)
         for name in files:
             path = current_path / name
             metadata = _lstat(path)
-            if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
-                raise StateError("PATH_LINK_COUNT_INVALID")
+            _validate_owner(metadata, mode=FILE_MODE, directory=False)
             total += metadata.st_size
             if total > MAX_RUN_BYTES:
                 raise StateError("RUN_SIZE_LIMIT_EXCEEDED")
@@ -918,6 +983,35 @@ def _bootstrap_probe(
         "timeout_seconds": 30,
         "required_authority": "coordinator_parent",
     }
+
+
+def _validate_pointer_observation(
+    observation: PointerObservation,
+    intended: dict[str, object],
+    expected_before_sha256: str,
+) -> None:
+    if observation.classification not in {
+        "intended_effect_present",
+        "prestate_unchanged",
+        "conflicting_effect",
+        "insufficient_observation",
+    } or not re.fullmatch(r"[0-9a-f]{64}", observation.state_sha256):
+        raise StateError("POINTER_OBSERVATION_INVALID")
+    if observation.observed_value is not None:
+        observed_digest = sha256_bytes(
+            canonical_payload_bytes(observation.observed_value)
+        )
+        if observed_digest != observation.state_sha256:
+            raise StateError("POINTER_OBSERVATION_INVALID")
+    if observation.classification == "intended_effect_present" and (
+        observation.observed_value != intended
+        or observation.state_sha256 != sha256_bytes(canonical_payload_bytes(intended))
+    ):
+        raise StateError("POINTER_OBSERVATION_INVALID")
+    if observation.classification == "prestate_unchanged" and (
+        observation.state_sha256 != expected_before_sha256
+    ):
+        raise StateError("POINTER_OBSERVATION_INVALID")
 
 
 def _prepared_event(
@@ -1152,6 +1246,61 @@ def bootstrap_run(
                 )
                 owner_evidence = validate_owner_file(owner_path, root=root)
                 evidence_sha = sha256_bytes(owner_evidence.read_bytes())
+                try:
+                    owner_input_raw = validate_owner_file(
+                        Path(dangling_acquire["immutable_input_path"]), root=run
+                    ).read_bytes()
+                    owner_input = schema_runtime.strict_json_loads(
+                        owner_input_raw, max_bytes=MAX_MANIFEST_BYTES
+                    )
+                    acquired = dt.datetime.strptime(
+                        dangling_acquire["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                    ).replace(tzinfo=dt.timezone.utc)
+                    expected_owner = {
+                        "schema_version": "beads.ownership-record.v1",
+                        "issue_id": owner_input["issue_id"],
+                        "issue_key": issue_key(owner_input["issue_id"]),
+                        "actor": owner_input["actor"],
+                        "run_id": owner_input["run_id"],
+                        "epoch": owner_input["epoch"],
+                        "token_sha256": sha256_bytes(
+                            beads_ownership.derive_token(
+                                bytes.fromhex(manifest["run_secret_hex"]),
+                                owner_input["issue_id"],
+                                owner_input["epoch"],
+                            )
+                        ),
+                        "acquisition_operation_id": dangling_acquire["operation_id"],
+                        "tracker_state_sha256": owner_input["tracker_state_sha256"],
+                        "acquired_at": dangling_acquire["timestamp"],
+                        "renewed_at": dangling_acquire["timestamp"],
+                        "lease_expires_at": utc_timestamp(
+                            acquired
+                            + dt.timedelta(seconds=beads_ownership.LEASE_SECONDS)
+                        ),
+                        "status": "active",
+                    }
+                except (KeyError, ValueError, StateError) as exc:
+                    raise StateError("OWNERSHIP_RECOVERY_EVIDENCE_INVALID") from exc
+                if (
+                    owner_input_raw != canonical_bytes(owner_input)
+                    or sha256_bytes(owner_input_raw)
+                    != dangling_acquire["immutable_input_sha256"]
+                    or dangling_acquire["operation_id"]
+                    != semantic_operation_id(
+                        {
+                            "schema": "beads.ownership-acquire-input.v1",
+                            "effect_type": "OWNERSHIP_ACQUIRE",
+                            "target_identity": owner_input["issue_id"],
+                            "immutable_input_sha256": sha256_bytes(owner_input_raw),
+                            "ownership_epoch": owner_input["epoch"],
+                        }
+                    )
+                    or inspected.record != expected_owner
+                    or evidence_sha
+                    != dangling_acquire["recovery_probe"]["intended_after_sha256"]
+                ):
+                    raise StateError("OWNERSHIP_RECOVERY_EVIDENCE_INVALID")
                 journal.append(
                     _resolution_event(
                         dangling_acquire,
@@ -1202,14 +1351,49 @@ def bootstrap_run(
             owner_path = (
                 root / "_ownership" / issue_key(request.root_issue_id) / "current.json"
             )
+            acquisition_time = dt.datetime.strptime(
+                now, "%Y-%m-%dT%H:%M:%S.%fZ"
+            ).replace(tzinfo=dt.timezone.utc)
+            expected_owner = {
+                "schema_version": "beads.ownership-record.v1",
+                "issue_id": request.root_issue_id,
+                "issue_key": issue_key(request.root_issue_id),
+                "actor": request.actor,
+                "run_id": run.name,
+                "epoch": proposed_epoch,
+                "token_sha256": sha256_bytes(
+                    beads_ownership.derive_token(
+                        bytes.fromhex(manifest["run_secret_hex"]),
+                        request.root_issue_id,
+                        proposed_epoch,
+                    )
+                ),
+                "acquisition_operation_id": operation_id,
+                "tracker_state_sha256": "0" * 64,
+                "acquired_at": now,
+                "renewed_at": now,
+                "lease_expires_at": utc_timestamp(
+                    acquisition_time
+                    + dt.timedelta(seconds=beads_ownership.LEASE_SECONDS)
+                ),
+                "status": "active",
+            }
+            expected_owner_sha = sha256_bytes(canonical_bytes(expected_owner))
+            owner_before_sha = (
+                sha256_bytes(canonical_bytes(inspected.record))
+                if inspected.record is not None
+                else GENESIS_SHA256
+            )
             prepared = _prepared_event(
                 run=run,
                 operation_id=operation_id,
                 effect_type="OWNERSHIP_ACQUIRE",
                 input_path=owner_input_path,
                 input_sha=owner_sha,
-                expected_sha="0" * 64,
-                probe=_bootstrap_probe(str(owner_path.resolve()), "0" * 64, owner_sha),
+                expected_sha=owner_before_sha,
+                probe=_bootstrap_probe(
+                    str(owner_path.resolve()), owner_before_sha, expected_owner_sha
+                ),
                 timestamp=now,
                 issue_id=request.root_issue_id,
                 epoch=proposed_epoch,
@@ -1221,12 +1405,12 @@ def bootstrap_run(
                 run_directory=run,
                 tracker_state_sha256="0" * 64,
                 operation_id=operation_id,
-                now=dt.datetime.strptime(now, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-                    tzinfo=dt.timezone.utc
-                ),
+                now=acquisition_time,
             )
             if owned.disposition != "held" or owned.record is None:
                 return BootstrapResult("conflict", run.name, run, None, None)
+            if owned.record != expected_owner:
+                raise StateError("OWNERSHIP_ACQUISITION_READBACK_MISMATCH")
             owner_evidence = validate_owner_file(owner_path, root=root)
             evidence_sha = sha256_bytes(owner_evidence.read_bytes())
             journal.append(
@@ -1270,6 +1454,7 @@ def bootstrap_run(
                 "status": "active",
             }
             observation = callbacks.observe(expected)
+            _validate_pointer_observation(observation, expected, GENESIS_SHA256)
             if observation.classification != "intended_effect_present":
                 raise StateError("ACTIVE_POINTER_MISMATCH")
             if mapping["status"] != "active":
@@ -1302,7 +1487,6 @@ def bootstrap_run(
             pointer_path, pointer_raw + b"\n", root=run, max_bytes=512, hook=crash_hook
         )
         pointer_sha = sha256_bytes(pointer_raw)
-        before = callbacks.observe(pointer)
         pointer_operation = semantic_operation_id(
             {
                 "schema": "beads.run-pointer.v1",
@@ -1312,7 +1496,7 @@ def bootstrap_run(
                 "ownership_epoch": owned.record["epoch"],
             }
         )
-        prepared = next(
+        existing_prepared = next(
             (
                 item
                 for item in journal.read().records
@@ -1320,15 +1504,23 @@ def bootstrap_run(
                 and item["operation_id"] == pointer_operation
             ),
             None,
-        ) or _prepared_event(
+        )
+        expected_before = (
+            existing_prepared["expected_pre_state_sha256"]
+            if existing_prepared is not None
+            else GENESIS_SHA256
+        )
+        before = callbacks.observe(pointer)
+        _validate_pointer_observation(before, pointer, expected_before)
+        prepared = existing_prepared or _prepared_event(
             run=run,
             operation_id=pointer_operation,
             effect_type="ACTIVE_POINTER_PUBLISH",
             input_path=pointer_path,
             input_sha=pointer_sha,
-            expected_sha=before.state_sha256,
+            expected_sha=expected_before,
             probe=_bootstrap_probe(
-                request.root_issue_id, before.state_sha256, pointer_sha, "tracker_state"
+                request.root_issue_id, expected_before, pointer_sha, "tracker_state"
             ),
             timestamp=now,
             issue_id=request.root_issue_id,
@@ -1341,6 +1533,9 @@ def bootstrap_run(
             else callbacks.publish(pointer)
         )
         crash_hook("after_pointer_publication")
+        _validate_pointer_observation(
+            outcome, pointer, prepared["expected_pre_state_sha256"]
+        )
         classification_status = {
             "intended_effect_present": "APPLIED",
             "prestate_unchanged": "NOT_APPLIED",
@@ -1352,6 +1547,7 @@ def bootstrap_run(
         evidence_value = {
             "classification": outcome.classification,
             "state_sha256": outcome.state_sha256,
+            "observed_value": outcome.observed_value,
         }
         evidence_path = run / "bootstrap-pointer-evidence.json"
         evidence_raw = canonical_bytes(evidence_value)

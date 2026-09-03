@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib
+import json
 import multiprocessing
 import sys
 from pathlib import Path
@@ -211,3 +212,235 @@ def test_missing_history_mismatch_overflow_and_secret_persistence_fail_closed(
     )
     assert bytes.fromhex("ab" * 32) not in persisted
     assert ("ab" * 32).encode() not in ownership_bytes
+
+
+@pytest.mark.parametrize(
+    "crash_event",
+    [
+        "after_ownership_history_write",
+        "after_ownership_history_fsync",
+        "after_temp_write",
+        "after_temp_fsync",
+        "after_atomic_rename",
+        "after_directory_fsync",
+        "after_ownership_current_publication",
+    ],
+)
+def test_acquire_recovers_every_two_file_publication_crash(
+    setup, crash_event: str
+) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    now = dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc)
+
+    def crash(event: str) -> None:
+        if event == crash_event:
+            raise RuntimeError("crash witness")
+
+    with pytest.raises(RuntimeError, match="crash witness"):
+        ownership.OwnershipStore(root, crash_hook=crash).acquire(
+            issue_id="issue",
+            actor="actor",
+            run_directory=run,
+            tracker_state_sha256="0" * 64,
+            operation_id="1" * 64,
+            now=now,
+        )
+
+    recovered = ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=now,
+    )
+    assert recovered.disposition == "held"
+    assert recovered.record is not None and recovered.record["epoch"] == 1
+    assert len(recovered.history) == 1
+
+
+def test_release_prepared_and_released_retries_are_idempotent(setup) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    now = dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc)
+    ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=now,
+    )
+
+    def crash(event: str) -> None:
+        if event == "after_ownership_current_publication":
+            raise RuntimeError("crash witness")
+
+    with pytest.raises(RuntimeError, match="crash witness"):
+        ownership.OwnershipStore(root, crash_hook=crash).release(
+            "issue", run, epoch=1, operation_id="2" * 64, now=now
+        )
+    prepared = ownership.OwnershipStore(root).inspect("issue")
+    assert (
+        prepared.record is not None and prepared.record["status"] == "release_prepared"
+    )
+
+    released = ownership.OwnershipStore(root).release(
+        "issue", run, epoch=1, operation_id="2" * 64, now=now
+    )
+    assert released.disposition == "released"
+    history_bytes = (
+        root / "_ownership" / state.issue_key("issue") / "events.jsonl"
+    ).read_bytes()
+    repeated = ownership.OwnershipStore(root).release(
+        "issue", run, epoch=1, operation_id="2" * 64, now=now
+    )
+    assert repeated.disposition == "released"
+    assert (
+        root / "_ownership" / state.issue_key("issue") / "events.jsonl"
+    ).read_bytes() == history_bytes
+
+
+@pytest.mark.parametrize(
+    "crash_event",
+    [
+        "after_ownership_history_fsync",
+        "after_temp_fsync",
+        "after_atomic_rename",
+        "after_directory_fsync",
+        "after_ownership_current_publication",
+    ],
+)
+def test_renew_retry_converges_without_duplicate_history(
+    setup, crash_event: str
+) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    now = dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc)
+    ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=now,
+    )
+
+    def crash(event: str) -> None:
+        if event == crash_event:
+            raise RuntimeError("crash witness")
+
+    with pytest.raises(RuntimeError, match="crash witness"):
+        ownership.OwnershipStore(root, crash_hook=crash).renew(
+            "issue",
+            run,
+            epoch=1,
+            operation_id="2" * 64,
+            now=now + dt.timedelta(minutes=1),
+        )
+    recovered = ownership.OwnershipStore(root).renew(
+        "issue",
+        run,
+        epoch=1,
+        operation_id="2" * 64,
+        now=now + dt.timedelta(minutes=1),
+    )
+    assert recovered.disposition == "held"
+    assert len(recovered.history) == 2
+
+
+def test_expiry_retry_converges_to_stable_unknown(setup) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    now = dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc)
+    ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=now,
+    )
+
+    def crash(event: str) -> None:
+        if event == "after_ownership_history_fsync":
+            raise RuntimeError("crash witness")
+
+    with pytest.raises(RuntimeError, match="crash witness"):
+        ownership.OwnershipStore(root, crash_hook=crash).verify(
+            "issue", run, epoch=1, now=now + dt.timedelta(minutes=16)
+        )
+    recovered = ownership.OwnershipStore(root).verify(
+        "issue", run, epoch=1, now=now + dt.timedelta(minutes=16)
+    )
+    assert recovered.disposition == "unknown"
+    assert len(recovered.history) == 2
+
+
+def test_release_retry_after_released_history_and_current_publication(setup) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    now = dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc)
+    ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=now,
+    )
+    publications = 0
+
+    def crash(event: str) -> None:
+        nonlocal publications
+        if event == "after_ownership_current_publication":
+            publications += 1
+            if publications == 2:
+                raise RuntimeError("crash witness")
+
+    with pytest.raises(RuntimeError, match="crash witness"):
+        ownership.OwnershipStore(root, crash_hook=crash).release(
+            "issue", run, epoch=1, operation_id="2" * 64, now=now
+        )
+    recovered = ownership.OwnershipStore(root).release(
+        "issue", run, epoch=1, operation_id="2" * 64, now=now
+    )
+    assert recovered.disposition == "released"
+    assert len(recovered.history) == 3
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("actor", "attacker"),
+        ("acquisition_operation_id", "9" * 64),
+        ("tracker_state_sha256", "8" * 64),
+        ("acquired_at", "2026-09-03T11:00:00.000000Z"),
+        ("renewed_at", "2026-09-03T11:00:00.000000Z"),
+        ("lease_expires_at", "2099-09-03T12:00:00.000000Z"),
+    ],
+)
+def test_history_authenticates_every_authoritative_current_field(
+    setup, field: str, replacement: str
+) -> None:
+    state, ownership, root = setup
+    run = _make_run(state, root, "ABCDEFGH", "ab" * 32)
+    ownership.OwnershipStore(root).acquire(
+        issue_id="issue",
+        actor="actor",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id="1" * 64,
+        now=dt.datetime(2026, 9, 3, 12, tzinfo=dt.timezone.utc),
+    )
+    current_path = root / "_ownership" / state.issue_key("issue") / "current.json"
+    current = json.loads(current_path.read_bytes())
+    current[field] = replacement
+    current_path.write_bytes(state.canonical_bytes(current))
+    current_path.chmod(0o600)
+
+    with pytest.raises(
+        ownership.OwnershipError, match="OWNERSHIP_CURRENT_HISTORY_MISMATCH"
+    ):
+        ownership.OwnershipStore(root).inspect("issue")

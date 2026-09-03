@@ -74,11 +74,26 @@ class OwnershipStore:
         state.ensure_owner_directory(self.root, root=self.run_root)
         self.crash_hook = crash_hook
 
+    @classmethod
+    def open_existing(cls, run_root: Path) -> "OwnershipStore":
+        instance = cls.__new__(cls)
+        instance.run_root = state.validate_owner_directory(Path(run_root))
+        instance.root = state.validate_owner_directory(
+            instance.run_root / "_ownership", root=instance.run_root
+        )
+        instance.crash_hook = state.NOOP_HOOK
+        return instance
+
     def _directory(self, issue_id: str) -> Path:
         key = state.issue_key(issue_id)
         directory = self.root / key
         state.ensure_owner_directory(directory, root=self.run_root)
         return directory
+
+    def _existing_directory(self, issue_id: str) -> Path:
+        return state.validate_owner_directory(
+            self.root / state.issue_key(issue_id), root=self.run_root
+        )
 
     def _run(self, run_directory: Path) -> tuple[dict[str, Any], bytes]:
         try:
@@ -100,25 +115,26 @@ class OwnershipStore:
         return manifest, secret
 
     def _read_unlocked(
-        self, directory: Path, issue_id: str
+        self, directory: Path, issue_id: str, *, reconcile: bool = True
     ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         history_path = directory / "events.jsonl"
         current_path = directory / "current.json"
         history_exists = history_path.exists()
         current_exists = current_path.exists()
-        if history_exists != current_exists:
-            code = (
-                "OWNERSHIP_HISTORY_MISSING"
-                if current_exists
-                else "OWNERSHIP_CURRENT_MISSING"
-            )
-            raise OwnershipError(code)
+        if current_exists and not history_exists:
+            raise OwnershipError("OWNERSHIP_HISTORY_MISSING")
         if not history_exists:
             return [], None
         try:
-            history_raw = state.validate_owner_file(
-                history_path, root=self.run_root
-            ).read_bytes()
+            history_raw = (
+                state._read_and_fsync_existing_file(
+                    history_path, root=self.run_root, max_bytes=state.MAX_RUN_BYTES
+                )
+                if reconcile
+                else state.validate_owner_file(
+                    history_path, root=self.run_root
+                ).read_bytes()
+            )
             parsed = state._read_canonical_lines(
                 history_raw, "ownership-history-event-v1.schema.json"
             )
@@ -130,15 +146,88 @@ class OwnershipStore:
             raise OwnershipError("OWNERSHIP_HISTORY_MISSING")
         history = list(parsed.records)
         previous_epoch = 0
+        previous_event: dict[str, Any] | None = None
+        operations: dict[str, dict[str, Any]] = {}
         for event in history:
             if event["issue_id"] != issue_id:
                 raise OwnershipError("OWNERSHIP_ISSUE_MISMATCH")
+            record = event["record"]
+            if (
+                state.sha256_bytes(state.canonical_bytes(record))
+                != event["record_sha256"]
+                or record["issue_id"] != event["issue_id"]
+                or record["run_id"] != event["run_id"]
+                or record["epoch"] != event["epoch"]
+                or record["status"] != event["status"]
+                or record["token_sha256"] != event["token_sha256"]
+            ):
+                raise OwnershipError("OWNERSHIP_HISTORY_INVALID")
             epoch = event["epoch"]
-            if epoch < previous_epoch or epoch > previous_epoch + 1:
+            acquired_at = _parse_time(record["acquired_at"])
+            renewed_at = _parse_time(record["renewed_at"])
+            lease_expires_at = _parse_time(record["lease_expires_at"])
+            if (
+                acquired_at > renewed_at
+                or (record["status"] == "active" and renewed_at > lease_expires_at)
+                or event["timestamp"] != record["renewed_at"]
+            ):
+                raise OwnershipError("OWNERSHIP_HISTORY_TRANSITION_INVALID")
+            if (
+                (previous_event is None and epoch != 1)
+                or epoch < previous_epoch
+                or epoch > previous_epoch + 1
+            ):
                 raise OwnershipError("OWNERSHIP_EPOCH_SEQUENCE_INVALID")
-            if epoch == previous_epoch + 1 and event["status"] != "active":
+            if epoch == previous_epoch + 1 and (
+                event["status"] != "active"
+                or (
+                    previous_event is not None
+                    and previous_event["status"] != "released"
+                )
+            ):
                 raise OwnershipError("OWNERSHIP_EPOCH_SEQUENCE_INVALID")
+            prior_operation = operations.get(event["operation_id"])
+            if prior_operation is not None and not (
+                prior_operation["status"] == "release_prepared"
+                and event["status"] == "released"
+                and prior_operation["epoch"] == event["epoch"]
+            ):
+                raise OwnershipError("OWNERSHIP_OPERATION_ID_REUSE_CONFLICT")
+            operations[event["operation_id"]] = event
+            if previous_event is not None:
+                previous_record = previous_event["record"]
+                if epoch == previous_epoch and (
+                    record["issue_key"] != previous_record["issue_key"]
+                    or record["actor"] != previous_record["actor"]
+                    or record["run_id"] != previous_record["run_id"]
+                    or record["token_sha256"] != previous_record["token_sha256"]
+                    or record["acquisition_operation_id"]
+                    != previous_record["acquisition_operation_id"]
+                    or record["tracker_state_sha256"]
+                    != previous_record["tracker_state_sha256"]
+                    or record["acquired_at"] != previous_record["acquired_at"]
+                ):
+                    raise OwnershipError("OWNERSHIP_HISTORY_TRANSITION_INVALID")
+                allowed = {
+                    ("active", "active"),
+                    ("active", "unknown"),
+                    ("active", "release_prepared"),
+                    ("release_prepared", "released"),
+                }
+                if (previous_event["status"], event["status"]) not in allowed:
+                    raise OwnershipError("OWNERSHIP_HISTORY_TRANSITION_INVALID")
+                if (
+                    previous_event["status"] == "release_prepared"
+                    and event["operation_id"] != previous_event["operation_id"]
+                ):
+                    raise OwnershipError("OWNERSHIP_HISTORY_TRANSITION_INVALID")
             previous_epoch = epoch
+            previous_event = event
+        if not current_exists:
+            if not reconcile:
+                raise OwnershipError("OWNERSHIP_CURRENT_MISSING", status="unknown")
+            self._publish_current(directory, history[-1]["record"])
+            current_exists = True
         current_raw = state.validate_owner_file(
             current_path, root=self.run_root
         ).read_bytes()
@@ -151,16 +240,18 @@ class OwnershipStore:
             raise OwnershipError("OWNERSHIP_CURRENT_INVALID") from exc
         if state.canonical_bytes(current) != current_raw:
             raise OwnershipError("OWNERSHIP_CURRENT_INVALID")
-        last = history[-1]
-        matching = (
-            current["issue_id"] == issue_id
-            and current["issue_key"] == directory.name
-            and current["run_id"] == last["run_id"]
-            and current["epoch"] == last["epoch"]
-            and current["status"] == last["status"]
-            and current["token_sha256"] == last["token_sha256"]
-        )
-        if not matching:
+        digest = state.sha256_bytes(state.canonical_bytes(current))
+        if digest != history[-1]["record_sha256"]:
+            if (
+                reconcile
+                and len(history) >= 2
+                and digest == history[-2]["record_sha256"]
+            ):
+                self._publish_current(directory, history[-1]["record"])
+                current = history[-1]["record"]
+            else:
+                raise OwnershipError("OWNERSHIP_CURRENT_HISTORY_MISMATCH")
+        if current["issue_id"] != issue_id or current["issue_key"] != directory.name:
             raise OwnershipError("OWNERSHIP_CURRENT_HISTORY_MISMATCH")
         return history, current
 
@@ -173,6 +264,14 @@ class OwnershipStore:
         timestamp: str,
     ) -> dict[str, Any]:
         _valid_hash(operation_id, "OWNERSHIP_OPERATION_ID_INVALID")
+        prior = [event for event in history if event["operation_id"] == operation_id]
+        if prior and not (
+            len(prior) == 1
+            and prior[0]["status"] == "release_prepared"
+            and record["status"] == "released"
+            and prior[0]["epoch"] == record["epoch"]
+        ):
+            raise OwnershipError("OWNERSHIP_OPERATION_ID_REUSE_CONFLICT")
         history_path = directory / "events.jsonl"
         if not history_path.exists():
             state.create_owner_file(history_path, root=self.run_root)
@@ -188,6 +287,8 @@ class OwnershipStore:
             "epoch": record["epoch"],
             "status": record["status"],
             "token_sha256": record["token_sha256"],
+            "record": record,
+            "record_sha256": state.sha256_bytes(state.canonical_bytes(record)),
             "previous_event_sha256": previous,
             "operation_id": operation_id,
             "timestamp": timestamp,
@@ -235,6 +336,21 @@ class OwnershipStore:
             }[current["status"]]
             return OwnershipResult(disposition, current, tuple(history))
 
+    def inspect_readonly(self, issue_id: str) -> OwnershipResult:
+        directory = self._existing_directory(issue_id)
+        with state.exclusive_lock(directory / "lock", root=self.run_root, create=False):
+            history, current = self._read_unlocked(directory, issue_id, reconcile=False)
+            if current is None:
+                return OwnershipResult("unheld", None, tuple(history))
+            disposition = {
+                "active": "held",
+                "released": "released",
+                "release_prepared": "unknown",
+                "unknown": "unknown",
+                "conflict": "conflict",
+            }[current["status"]]
+            return OwnershipResult(disposition, current, tuple(history))
+
     def acquire(
         self,
         *,
@@ -262,6 +378,7 @@ class OwnershipStore:
                     and current["run_id"] == manifest["run_id"]
                     and current["actor"] == actor
                     and current["acquisition_operation_id"] == operation_id
+                    and current["tracker_state_sha256"] == tracker_state_sha256
                 ):
                     return OwnershipResult("held", current, tuple(history))
                 if current["status"] == "active":
@@ -335,6 +452,10 @@ class OwnershipStore:
             current, _secret = self._require_capability(
                 issue_id, run_directory, epoch, history, loaded
             )
+            if history[-1]["operation_id"] == operation_id:
+                if history[-1]["timestamp"] != timestamp:
+                    raise OwnershipError("OWNERSHIP_OPERATION_ID_REUSE_CONFLICT")
+                return OwnershipResult("held", current, tuple(history))
             if current_time > _parse_time(current["lease_expires_at"]):
                 unknown = {**current, "status": "unknown", "renewed_at": timestamp}
                 self._append_event(directory, history, unknown, operation_id, timestamp)
@@ -366,6 +487,27 @@ class OwnershipStore:
             directory / "lock", root=self.run_root, hook=self.crash_hook
         ):
             history, loaded = self._read_unlocked(directory, issue_id)
+            if loaded is not None and loaded["status"] == "unknown":
+                manifest, secret = self._run(run_directory)
+                operation_id = state.semantic_operation_id(
+                    {
+                        "schema": "beads.ownership-expiry.v1",
+                        "effect_type": "OWNERSHIP_EXPIRED",
+                        "target_identity": issue_id,
+                        "immutable_input_sha256": loaded["token_sha256"],
+                        "ownership_epoch": epoch,
+                    }
+                )
+                expected_token = state.sha256_bytes(
+                    derive_token(secret, issue_id, epoch)
+                )
+                if (
+                    loaded["run_id"] == manifest["run_id"]
+                    and loaded["epoch"] == epoch
+                    and hmac.compare_digest(loaded["token_sha256"], expected_token)
+                    and history[-1]["operation_id"] == operation_id
+                ):
+                    return OwnershipResult("unknown", loaded, tuple(history))
             current, _secret = self._require_capability(
                 issue_id, run_directory, epoch, history, loaded
             )
@@ -402,6 +544,30 @@ class OwnershipStore:
             directory / "lock", root=self.run_root, hook=self.crash_hook
         ):
             history, loaded = self._read_unlocked(directory, issue_id)
+            manifest, secret = self._run(run_directory)
+            if loaded is not None and loaded["status"] in {
+                "release_prepared",
+                "released",
+            }:
+                expected_token = state.sha256_bytes(
+                    derive_token(secret, issue_id, epoch)
+                )
+                same_release = (
+                    loaded["run_id"] == manifest["run_id"]
+                    and loaded["epoch"] == epoch
+                    and hmac.compare_digest(loaded["token_sha256"], expected_token)
+                    and history[-1]["operation_id"] == operation_id
+                )
+                if not same_release:
+                    raise OwnershipError("OWNERSHIP_NOT_ACTIVE", status="unknown")
+                if loaded["status"] == "released":
+                    return OwnershipResult("released", loaded, tuple(history))
+                released = {**loaded, "status": "released"}
+                self._append_event(
+                    directory, history, released, operation_id, timestamp
+                )
+                self._publish_current(directory, released)
+                return OwnershipResult("released", released, tuple(history))
             current, _secret = self._require_capability(
                 issue_id, run_directory, epoch, history, loaded
             )
