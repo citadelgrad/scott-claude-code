@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -155,6 +156,19 @@ def test_packet_rejects_command_wrappers(tmp_path: Path, wrapper: str) -> None:
     value["verification"]["required_commands"] = [
         [f"/usr/bin/{wrapper}", "bd", "show", "scc-main"]
     ]
+
+    with pytest.raises(validator.PacketValidationError, match="FORBIDDEN_COMMAND"):
+        validator.validate_packet(json.dumps(value).encode())
+
+
+def test_packet_rejects_bd_through_executable_alias(tmp_path: Path) -> None:
+    validator = _load()
+    executable = shutil.which("bd")
+    assert executable is not None
+    alias = tmp_path / "harmless-check"
+    alias.symlink_to(Path(executable).resolve())
+    value = _packet(tmp_path)
+    value["verification"]["required_commands"] = [[str(alias), "show", "scc-main"]]
 
     with pytest.raises(validator.PacketValidationError, match="FORBIDDEN_COMMAND"):
         validator.validate_packet(json.dumps(value).encode())

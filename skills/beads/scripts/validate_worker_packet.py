@@ -115,9 +115,13 @@ def _command_forbidden(
     except OSError:
         resolved_name = first
     names = [Path(arg).name.casefold() for arg in argv]
+    forbidden_executables = (
+        {"bd", "beads"} | _SHELLS | _COMMAND_WRAPPERS | _REMOTE_COMMANDS
+    )
     if (
         any(name in {"bd", "beads"} | _SHELLS | _COMMAND_WRAPPERS for name in names)
         or first in _REMOTE_COMMANDS
+        or resolved_name in forbidden_executables
     ):
         return True
     if (
