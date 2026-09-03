@@ -1,0 +1,24 @@
+scripts/tests/beads_worker_result/test_cli.py
+  h_12ee2b2686c122 148-197
+scripts/tests/beads_worker_result/test_finalize.py
+  h_12ee2b2686c122 3,27-32,36-37,179-359
+scripts/tests/beads_worker_result/test_run_command.py
+  h_12ee2b2686c122 65-68,166-290
+skills/beads/references/worker-contract.md
+  h_12ee2b2686c122 151-163
+skills/beads/scripts/validate_worker_execution_result.py
+  h_12ee2b2686c122 119-137,153,155-168,171-172,283-285,315-328,397,414-417
+skills/beads/scripts/worker_result.py
+  h_12ee2b2686c122 7-8,31-41,232-363,407,431-448,450-454,456-471,473-474,567-575,577-583,658-671
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5ef7cd276b4a3f4c26c09e187e7e512ed22eed7f",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
