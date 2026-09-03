@@ -62,10 +62,10 @@ def test_run_command_uses_safe_output_and_records_immutable_evidence(
     assert stat.S_IMODE(stdout.stat().st_mode) == 0o600
     record = outbox / "command-000.json"
     assert record.is_file() and stat.S_IMODE(record.stat().st_mode) == 0o600
-    with pytest.raises(worker.WorkerResultError, match="COMMAND_ALREADY_ATTEMPTED"):
-        worker.run_declared_command(
-            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
-        )
+    repeated = worker.run_declared_command(
+        context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    assert repeated == evidence
 
 
 def test_run_command_rejects_undeclared_and_redacts_before_persistence(
@@ -163,3 +163,128 @@ def test_run_command_rejects_sensitive_argv_before_spawn_or_persistence(
         )
     assert called is False
     assert not list(outbox.glob("command-*"))
+
+
+def test_command_intent_is_immutable_before_spawn_and_unknown_is_never_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _load(WORKER_RESULT, "beads_worker_result_unknown_outcome")
+    command = ["/usr/bin/printf", "possibly ran"]
+    value, raw, digest = _packet(tmp_path, command)
+    outbox = Path(value["verification"]["worker_outbox"])
+    outbox.chmod(0o700)
+    monkeypatch.chdir(value["repository"]["worktree"])
+    context = worker.initialize_attempt(
+        raw, expected_packet_sha256=digest, ownership_epoch=15
+    )
+    intent_path = outbox / "command-000.intent.json"
+    calls = 0
+
+    def fail_after_observing_intent(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        assert intent_path.is_file()
+        assert stat.S_IMODE(intent_path.stat().st_mode) == 0o600
+        intent = json.loads(intent_path.read_text())
+        assert intent["command_index"] == 0
+        assert intent["argv"] == command
+        assert intent["packet_sha256"] == digest
+        raise OSError("publication failed after command outcome became unknowable")
+
+    monkeypatch.setattr(worker.safe_output, "run_command", fail_after_observing_intent)
+    with pytest.raises(worker.WorkerResultError, match="COMMAND_OUTCOME_UNKNOWN"):
+        worker.run_declared_command(
+            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    with pytest.raises(worker.WorkerResultError, match="COMMAND_OUTCOME_UNKNOWN"):
+        worker.run_declared_command(
+            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert calls == 1
+
+
+def test_partial_log_publication_preserves_hashes_and_refuses_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _load(WORKER_RESULT, "beads_worker_result_partial_logs")
+    value, raw, digest = _packet(tmp_path, ["/usr/bin/printf", "partial output"])
+    outbox = Path(value["verification"]["worker_outbox"])
+    outbox.chmod(0o700)
+    monkeypatch.chdir(value["repository"]["worktree"])
+    context = worker.initialize_attempt(
+        raw, expected_packet_sha256=digest, ownership_epoch=16
+    )
+    original_atomic_write = worker.safe_output._atomic_write
+    spawn_calls = 0
+
+    def fail_stderr(path: Path, data: bytes):
+        if path.name == "command-000.stderr.log":
+            raise OSError("injected stderr publication failure")
+        return original_atomic_write(path, data)
+
+    original_run_command = worker.safe_output.run_command
+
+    def count_spawn(*args, **kwargs):
+        nonlocal spawn_calls
+        spawn_calls += 1
+        return original_run_command(*args, **kwargs)
+
+    monkeypatch.setattr(worker.safe_output, "_atomic_write", fail_stderr)
+    monkeypatch.setattr(worker.safe_output, "run_command", count_spawn)
+    with pytest.raises(worker.CommandOutcomeUnknownError) as captured:
+        worker.run_declared_command(
+            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+
+    stdout = outbox / "command-000.stdout.log"
+    assert stdout.read_text() == "partial output"
+    by_name = {Path(item["path"]).name: item for item in captured.value.artifacts}
+    assert by_name[stdout.name] == {
+        "path": str(stdout),
+        "size_bytes": len(b"partial output"),
+        "sha256": hashlib.sha256(b"partial output").hexdigest(),
+    }
+    assert captured.value.safe_next_action == "start_new_attempt"
+    assert not (outbox / "command-000.json").exists()
+
+    with pytest.raises(worker.CommandOutcomeUnknownError):
+        worker.run_declared_command(
+            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert spawn_calls == 1
+
+
+def test_failed_intent_publication_leaves_untouched_command_retryable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _load(WORKER_RESULT, "beads_worker_result_intent_retry")
+    value, raw, digest = _packet(tmp_path, ["/usr/bin/printf", "retryable"])
+    outbox = Path(value["verification"]["worker_outbox"])
+    outbox.chmod(0o700)
+    monkeypatch.chdir(value["repository"]["worktree"])
+    context = worker.initialize_attempt(
+        raw, expected_packet_sha256=digest, ownership_epoch=17
+    )
+    original_write = worker.safe_output.write_new_artifact
+    failed = False
+
+    def fail_intent_before_publication(path: Path, data: bytes):
+        nonlocal failed
+        if path.name == "command-000.intent.json" and not failed:
+            failed = True
+            raise OSError("intent was not published")
+        return original_write(path, data)
+
+    monkeypatch.setattr(
+        worker.safe_output, "write_new_artifact", fail_intent_before_publication
+    )
+    with pytest.raises(worker.WorkerResultError, match="COMMAND_INTENT_WRITE_FAILED"):
+        worker.run_declared_command(
+            context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert not list(outbox.glob("command-*"))
+
+    evidence = worker.run_declared_command(
+        context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    assert evidence["safe_result"]["status"] == "SUCCESS"

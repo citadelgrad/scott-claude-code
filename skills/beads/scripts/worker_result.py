@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import stat
@@ -24,6 +26,17 @@ ATTEMPT_STATE_NAME = "attempt.json"
 
 class WorkerResultError(ValueError):
     """A worker operation failed closed before an unsafe effect."""
+
+
+class CommandOutcomeUnknownError(WorkerResultError):
+    """A command may have run, so only a new attempt can safely continue."""
+
+    error_code = "COMMAND_OUTCOME_UNKNOWN"
+    safe_next_action = "start_new_attempt"
+
+    def __init__(self, artifacts: tuple[dict[str, Any], ...]) -> None:
+        super().__init__(self.error_code)
+        self.artifacts = artifacts
 
 
 @dataclass(frozen=True)
@@ -216,6 +229,138 @@ def _ensure_context(context: AttemptContext) -> None:
     _read_exact_state(outbox / ATTEMPT_STATE_NAME, expected)
 
 
+def _command_intent(
+    context: AttemptContext, command_index: int, command: tuple[str, ...]
+) -> dict[str, Any]:
+    return {
+        "schema_version": "beads.worker-command-intent.v1",
+        "run_id": context.packet.value["run_id"],
+        "attempt_id": context.packet.value["attempt_id"],
+        "issue_id": context.packet.value["issue"]["id"],
+        "packet_sha256": context.packet.packet_sha256,
+        "ownership_epoch": context.ownership_epoch,
+        "command_index": command_index,
+        "argv": list(command),
+        "safe_next_action": "start_new_attempt",
+    }
+
+
+def _unknown_command_artifacts(
+    paths: tuple[Path, ...], max_bytes: int
+) -> tuple[dict[str, Any], ...]:
+    artifacts: list[dict[str, Any]] = []
+    for path in paths:
+        if not path.exists() and not path.is_symlink():
+            continue
+        entry: dict[str, Any] = {"path": str(path), "size_bytes": None, "sha256": None}
+        try:
+            metadata = path.stat(follow_symlinks=False)
+            if (
+                not path.is_symlink()
+                and stat.S_ISREG(metadata.st_mode)
+                and metadata.st_uid == os.getuid()
+                and stat.S_IMODE(metadata.st_mode) == 0o600
+            ):
+                data = schema_runtime.read_bounded(path, max_bytes)
+                entry.update(
+                    size_bytes=len(data), sha256=hashlib.sha256(data).hexdigest()
+                )
+        except (OSError, schema_runtime.JsonLoadFailure):
+            pass
+        artifacts.append(entry)
+    return tuple(artifacts)
+
+
+def _command_outcome_unknown(
+    paths: tuple[Path, ...], max_bytes: int
+) -> CommandOutcomeUnknownError:
+    return CommandOutcomeUnknownError(_unknown_command_artifacts(paths, max_bytes))
+
+
+def _read_completed_command(
+    *,
+    context: AttemptContext,
+    command_index: int,
+    command: tuple[str, ...],
+    intent_path: Path,
+    intent_bytes: bytes,
+    record_path: Path,
+    stdout_path: Path,
+    stderr_path: Path,
+    artifact_limit: int,
+) -> dict[str, Any]:
+    paths = (intent_path, record_path, stdout_path, stderr_path)
+    try:
+        _read_exact_final(intent_path, intent_bytes, "COMMAND_OUTCOME_UNKNOWN")
+        record_bytes = schema_runtime.read_bounded(record_path, artifact_limit)
+        record_metadata = record_path.stat(follow_symlinks=False)
+        if (
+            record_path.is_symlink()
+            or not stat.S_ISREG(record_metadata.st_mode)
+            or record_metadata.st_uid != os.getuid()
+            or stat.S_IMODE(record_metadata.st_mode) != 0o600
+        ):
+            raise ValueError("invalid command evidence file")
+        evidence = schema_runtime.strict_json_loads(
+            record_bytes, max_bytes=artifact_limit
+        )
+        if not isinstance(evidence, dict) or record_bytes != _canonical_json(evidence):
+            raise ValueError("invalid command evidence")
+        expected_identity = {
+            "schema_version": "beads.worker-command-evidence.v1",
+            "run_id": context.packet.value["run_id"],
+            "attempt_id": context.packet.value["attempt_id"],
+            "issue_id": context.packet.value["issue"]["id"],
+            "packet_sha256": context.packet.packet_sha256,
+            "ownership_epoch": context.ownership_epoch,
+            "command_index": command_index,
+            "argv": list(command),
+            "safe_result": evidence.get("safe_result"),
+        }
+        if evidence != expected_identity:
+            raise ValueError("command evidence identity mismatch")
+        findings = schema_runtime.validate_instance(
+            "safe-command-result-v1.schema.json", evidence["safe_result"]
+        )
+        if findings:
+            raise ValueError("invalid safe command result")
+        safe_result = evidence["safe_result"]
+        argv_descriptor = json.dumps(
+            list(command), ensure_ascii=False, separators=(",", ":")
+        ).encode()
+        if safe_result["profile"] != "verification" or not hmac.compare_digest(
+            safe_result["argv_sha256"], hashlib.sha256(argv_descriptor).hexdigest()
+        ):
+            raise ValueError("safe command identity mismatch")
+        for key, expected_path in (
+            ("stdout_log", stdout_path),
+            ("stderr_log", stderr_path),
+        ):
+            artifact = evidence["safe_result"][key]
+            if artifact is None:
+                if expected_path.exists() or expected_path.is_symlink():
+                    raise ValueError("unexpected command log")
+                continue
+            if artifact["path"] != str(expected_path):
+                raise ValueError("command log path mismatch")
+            data = schema_runtime.read_bounded(expected_path, artifact_limit)
+            metadata = expected_path.stat(follow_symlinks=False)
+            if (
+                expected_path.is_symlink()
+                or not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_uid != os.getuid()
+                or stat.S_IMODE(metadata.st_mode) != 0o600
+                or artifact["size_bytes"] != len(data)
+                or not hmac.compare_digest(
+                    artifact["sha256"], hashlib.sha256(data).hexdigest()
+                )
+            ):
+                raise ValueError("command log identity mismatch")
+        return evidence
+    except (OSError, ValueError, TypeError, schema_runtime.JsonLoadFailure):
+        raise _command_outcome_unknown(paths, artifact_limit) from None
+
+
 def run_declared_command(
     context: AttemptContext,
     *,
@@ -259,14 +404,10 @@ def run_declared_command(
         raise WorkerResultError("COMMAND_ARGV_SENSITIVE")
 
     stem = f"command-{command_index:03d}"
+    intent_path = context.outbox / f"{stem}.intent.json"
     record_path = context.outbox / f"{stem}.json"
     stdout_path = context.outbox / f"{stem}.stdout.log"
     stderr_path = context.outbox / f"{stem}.stderr.log"
-    if any(
-        path.exists() or path.is_symlink()
-        for path in (record_path, stdout_path, stderr_path)
-    ):
-        raise WorkerResultError("COMMAND_ALREADY_ATTEMPTED")
 
     artifact_limit = context.packet.value["verification"]["max_artifact_bytes"]
     stream_limit = min(1024 * 1024, artifact_limit)
@@ -287,29 +428,50 @@ def run_declared_command(
         stdout_log=stdout_path,
         stderr_log=stderr_path,
     )
+    intent_bytes = _canonical_json(_command_intent(context, command_index, command))
+    if len(intent_bytes) > artifact_limit:
+        raise WorkerResultError("COMMAND_INTENT_TOO_LARGE")
+    paths = (intent_path, record_path, stdout_path, stderr_path)
+    if record_path.exists() or record_path.is_symlink():
+        return _read_completed_command(
+            context=context,
+            command_index=command_index,
+            command=command,
+            intent_path=intent_path,
+            intent_bytes=intent_bytes,
+            record_path=record_path,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            artifact_limit=artifact_limit,
+        )
+    if any(path.exists() or path.is_symlink() for path in paths):
+        raise _command_outcome_unknown(paths, artifact_limit)
+    try:
+        safe_output.write_new_artifact(intent_path, intent_bytes)
+    except (OSError, ValueError):
+        if intent_path.exists() or intent_path.is_symlink():
+            raise _command_outcome_unknown(paths, artifact_limit) from None
+        raise WorkerResultError("COMMAND_INTENT_WRITE_FAILED") from None
     try:
         result, _ = safe_output.run_command(spec, sensitive=sensitive)
-    except safe_output.SafeOutputError as exc:
-        raise WorkerResultError(str(exc)) from None
-    _ensure_context(context)
-    evidence = {
-        "schema_version": "beads.worker-command-evidence.v1",
-        "run_id": context.packet.value["run_id"],
-        "attempt_id": context.packet.value["attempt_id"],
-        "issue_id": context.packet.value["issue"]["id"],
-        "packet_sha256": context.packet.packet_sha256,
-        "ownership_epoch": context.ownership_epoch,
-        "command_index": command_index,
-        "argv": list(command),
-        "safe_result": safe_output.result_dict(result),
-    }
-    data = _canonical_json(evidence)
-    if len(data) > artifact_limit:
-        raise WorkerResultError("COMMAND_EVIDENCE_TOO_LARGE")
-    try:
+        _ensure_context(context)
+        evidence = {
+            "schema_version": "beads.worker-command-evidence.v1",
+            "run_id": context.packet.value["run_id"],
+            "attempt_id": context.packet.value["attempt_id"],
+            "issue_id": context.packet.value["issue"]["id"],
+            "packet_sha256": context.packet.packet_sha256,
+            "ownership_epoch": context.ownership_epoch,
+            "command_index": command_index,
+            "argv": list(command),
+            "safe_result": safe_output.result_dict(result),
+        }
+        data = _canonical_json(evidence)
+        if len(data) > artifact_limit:
+            raise WorkerResultError("COMMAND_EVIDENCE_TOO_LARGE")
         safe_output.write_new_artifact(record_path, data)
-    except safe_output.SafeOutputError as exc:
-        raise WorkerResultError(str(exc)) from None
+    except (OSError, ValueError, TypeError):
+        raise _command_outcome_unknown(paths, artifact_limit) from None
     return evidence
 
 
@@ -380,14 +542,6 @@ def finalize_attempt(
         raise WorkerResultError(str(exc)) from None
 
     result_path = context.outbox / "result.json"
-    if result_path.exists() or result_path.is_symlink():
-        _read_exact_final(result_path, result_bytes, "FINAL_RESULT_CONFLICT")
-    else:
-        try:
-            safe_output.write_new_artifact(result_path, result_bytes)
-        except (OSError, ValueError):
-            raise WorkerResultError("FINALIZE_WRITE_FAILED") from None
-    _ensure_context(context)
     receipt = {
         "schema_version": "beads.worker-result-receipt.v1",
         "run_id": context.packet.value["run_id"],
@@ -410,9 +564,23 @@ def finalize_attempt(
     ):
         raise WorkerResultError("RECEIPT_TOO_LARGE")
     receipt_path = context.outbox / "receipt.json"
-    if receipt_path.exists() or receipt_path.is_symlink():
+
+    # Preflight the complete pair before publishing either half.  Publication
+    # remains result-first so a crash can be retried without exposing a receipt
+    # whose referenced result does not yet exist.
+    result_preexisting = result_path.exists() or result_path.is_symlink()
+    receipt_preexisting = receipt_path.exists() or receipt_path.is_symlink()
+    if result_preexisting:
+        _read_exact_final(result_path, result_bytes, "FINAL_RESULT_CONFLICT")
+    if receipt_preexisting:
         _read_exact_final(receipt_path, receipt_bytes, "FINAL_RECEIPT_CONFLICT")
-    else:
+    if not result_preexisting:
+        try:
+            safe_output.write_new_artifact(result_path, result_bytes)
+        except (OSError, ValueError):
+            raise WorkerResultError("FINALIZE_WRITE_FAILED") from None
+    _ensure_context(context)
+    if not receipt_preexisting:
         try:
             safe_output.write_new_artifact(receipt_path, receipt_bytes)
         except (OSError, ValueError):
@@ -487,6 +655,20 @@ def main(argv: list[str] | None = None) -> int:
             code = 0
         print(json.dumps(output, sort_keys=True, separators=(",", ":")))
         return code
+    except CommandOutcomeUnknownError as exc:
+        print(
+            json.dumps(
+                {
+                    "error_code": exc.error_code,
+                    "status": "REFUSED",
+                    "safe_next_action": exc.safe_next_action,
+                    "artifacts": list(exc.artifacts),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+        return 2
     except (OSError, ValueError, TypeError, schema_runtime.JsonLoadFailure):
         print('{"error_code":"WORKER_RESULT_REFUSED","status":"REFUSED"}')
         return 2

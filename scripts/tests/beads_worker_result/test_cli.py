@@ -145,3 +145,53 @@ def test_cli_refusals_are_generic_and_do_not_echo_sensitive_inputs(
         "error_code": "WORKER_RESULT_REFUSED",
         "status": "REFUSED",
     }
+
+
+def test_cli_reports_typed_unknown_command_outcome(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    worker = _load(WORKER_RESULT, "beads_worker_result_cli_unknown")
+    factory = _load(PACKET_TEST, "worker_result_cli_unknown_packet_factory")
+    result_factory = _load(FINALIZE_TEST, "worker_result_cli_unknown_result_factory")
+    packet = factory._packet(tmp_path)
+    packet["verification"]["required_commands"] = [["/usr/bin/printf", "maybe"]]
+    outbox = Path(packet["verification"]["worker_outbox"])
+    outbox.chmod(0o700)
+    packet_path = tmp_path / "packet.json"
+    packet_bytes = json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
+    packet_path.write_bytes(packet_bytes)
+    digest = hashlib.sha256(packet_bytes).hexdigest()
+    descriptor = result_factory._descriptor(tmp_path, [])
+    monkeypatch.chdir(packet["repository"]["worktree"])
+
+    def publication_failure(*args, **kwargs):
+        raise OSError("outcome unknown")
+
+    monkeypatch.setattr(worker.safe_output, "run_command", publication_failure)
+    assert (
+        worker.main(
+            [
+                "run-command",
+                "--worker-packet",
+                str(packet_path),
+                "--expected-packet-sha256",
+                digest,
+                "--ownership-epoch",
+                "32",
+                "--command-index",
+                "0",
+                "--sensitive-values-file",
+                str(descriptor),
+            ]
+        )
+        == 2
+    )
+    output = json.loads(capsys.readouterr().out)
+    assert output["error_code"] == "COMMAND_OUTCOME_UNKNOWN"
+    assert output["safe_next_action"] == "start_new_attempt"
+    assert output["status"] == "REFUSED"
+    assert [Path(item["path"]).name for item in output["artifacts"]] == [
+        "command-000.intent.json"
+    ]

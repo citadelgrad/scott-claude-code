@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -23,10 +24,17 @@ def _load(path: Path, name: str):
     return module
 
 
-def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Any, dict]:
+def _setup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    integration_mode: str = "patch_package",
+) -> tuple[Any, Any, dict]:
     worker = _load(WORKER_RESULT, f"beads_worker_finalize_{tmp_path.name}")
     factory = _load(PACKET_TEST, f"finalize_packet_factory_{tmp_path.name}")
     packet = factory._packet(tmp_path)
+    packet["scope"]["integration_mode"] = integration_mode
+    packet["scope"]["external_io"] = integration_mode == "external_export"
     packet["verification"]["required_commands"] = [["/usr/bin/printf", "ok"]]
     raw = json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
     digest = hashlib.sha256(raw).hexdigest()
@@ -168,3 +176,184 @@ def test_finalize_recovers_after_crash_between_result_and_receipt(
     )
     assert Path(receipt["result_path"]).is_file()
     assert (context.outbox / "receipt.json").is_file()
+
+
+def test_newline_receipt_refusal_has_no_publication_and_retry_is_safe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
+    descriptor = _descriptor(tmp_path, [])
+    original = worker.safe_output.write_new_artifact
+    final_publications: list[str] = []
+
+    def spy(path: Path, data: bytes):
+        if path.name in {"result.json", "receipt.json"}:
+            final_publications.append(path.name)
+        return original(path, data)
+
+    monkeypatch.setattr(worker.safe_output, "write_new_artifact", spy)
+    candidate["summary"] = "line one\nline two"
+    with pytest.raises(
+        worker.WorkerResultError, match="RECEIPT_SUMMARY_NOT_SINGLE_LINE"
+    ):
+        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+
+    assert final_publications == []
+    assert not (context.outbox / "result.json").exists()
+    assert not (context.outbox / "receipt.json").exists()
+
+    candidate["summary"] = "corrected summary"
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=descriptor
+    )
+    assert receipt["summary"] == "corrected summary"
+
+
+def test_oversized_receipt_refusal_has_no_publication_and_retry_is_safe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
+    descriptor = _descriptor(tmp_path, [])
+    candidate["summary"] = "x" * 2000
+
+    with pytest.raises(worker.WorkerResultError, match="RECEIPT_TOO_LARGE"):
+        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+    assert not (context.outbox / "result.json").exists()
+    assert not (context.outbox / "receipt.json").exists()
+
+    candidate["summary"] = "corrected summary"
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=descriptor
+    )
+    assert receipt["summary"] == "corrected summary"
+
+
+def test_conflicting_receipt_is_preflighted_before_result_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
+    descriptor = _descriptor(tmp_path, [])
+    receipt_path = context.outbox / "receipt.json"
+    receipt_path.write_text("{}\n")
+    receipt_path.chmod(0o600)
+    original = worker.safe_output.write_new_artifact
+    final_publications: list[str] = []
+
+    def spy(path: Path, data: bytes):
+        if path.name in {"result.json", "receipt.json"}:
+            final_publications.append(path.name)
+        return original(path, data)
+
+    monkeypatch.setattr(worker.safe_output, "write_new_artifact", spy)
+    with pytest.raises(worker.WorkerResultError, match="FINAL_RECEIPT_CONFLICT"):
+        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+    assert final_publications == []
+    assert not (context.outbox / "result.json").exists()
+
+    receipt_path.unlink()
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=descriptor
+    )
+    assert receipt["summary"] == candidate["summary"]
+
+
+def test_external_export_frozen_sha_must_match_verified_artifact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="external_export"
+    )
+    descriptor = _descriptor(tmp_path, [])
+    export = context.outbox / "worker-export.tar"
+    export.write_bytes(b"verified export")
+    export.chmod(0o600)
+    candidate["artifacts"].append(_identity(export, "external_export"))
+    candidate["worker_frozen_artifact"] = {
+        "type": "external_export",
+        "identity": "worker-export.tar",
+        "path": str(export),
+        "sha256": "0" * 64,
+        "tree_sha": None,
+    }
+
+    with pytest.raises(worker.WorkerResultError, match="EXPORT_ARTIFACT_HASH_MISMATCH"):
+        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+    assert not (context.outbox / "result.json").exists()
+    assert not (context.outbox / "receipt.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("defect", "error_code"),
+    [
+        ("path", "EXPORT_ARTIFACT_MISSING"),
+        ("type", "EXPORT_ARTIFACT_TYPE_MISMATCH"),
+        ("tree_sha", "EXPORT_ARTIFACT_INVALID"),
+        ("actual_size", "ARTIFACT_SIZE_MISMATCH"),
+        ("actual_hash", "ARTIFACT_HASH_MISMATCH"),
+    ],
+)
+def test_external_export_contract_precedes_actual_file_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    defect: str,
+    error_code: str,
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="external_export"
+    )
+    export = context.outbox / "worker-export.tar"
+    export.write_bytes(b"verified export")
+    export.chmod(0o600)
+    artifact = _identity(export, "external_export")
+    candidate["artifacts"].append(artifact)
+    candidate["worker_frozen_artifact"] = {
+        "type": "external_export",
+        "identity": "worker-export.tar",
+        "path": str(export),
+        "sha256": artifact["sha256"],
+        "tree_sha": None,
+    }
+    if defect == "path":
+        candidate["worker_frozen_artifact"]["path"] = str(
+            context.outbox / "different-export.tar"
+        )
+    elif defect == "type":
+        candidate["artifacts"][-1]["type"] = "test_log"
+    elif defect == "tree_sha":
+        candidate["worker_frozen_artifact"]["tree_sha"] = "a" * 40
+    elif defect == "actual_size":
+        export.write_bytes(b"verified export with trailing data")
+    else:
+        export.write_bytes(b"x" * len(b"verified export"))
+
+    with pytest.raises(worker.WorkerResultError, match=error_code):
+        worker.finalize_attempt(
+            context,
+            copy.deepcopy(candidate),
+            sensitive_values_file=_descriptor(tmp_path, []),
+        )
+
+
+def test_external_export_exact_contract_finalizes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="external_export"
+    )
+    export = context.outbox / "worker-export.tar"
+    export.write_bytes(b"verified export")
+    export.chmod(0o600)
+    artifact = _identity(export, "external_export")
+    candidate["artifacts"].append(artifact)
+    candidate["worker_frozen_artifact"] = {
+        "type": "external_export",
+        "identity": "worker-export.tar",
+        "path": str(export),
+        "sha256": artifact["sha256"],
+        "tree_sha": None,
+    }
+
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    assert receipt["status"] == "completed"

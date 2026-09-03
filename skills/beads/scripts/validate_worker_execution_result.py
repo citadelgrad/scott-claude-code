@@ -116,6 +116,25 @@ def _read_command_record(path: Path, max_bytes: int) -> dict[str, Any]:
     return value
 
 
+def _read_command_intent(path: Path, max_bytes: int) -> dict[str, Any]:
+    try:
+        metadata = path.stat(follow_symlinks=False)
+        raw = schema_runtime.read_bounded(path, max_bytes)
+        value = schema_runtime.strict_json_loads(raw, max_bytes=max_bytes)
+    except (OSError, schema_runtime.JsonLoadFailure):
+        _fail("COMMAND_INTENT_INVALID")
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != os.getuid()
+        or stat.S_IMODE(metadata.st_mode) != 0o600
+        or not isinstance(value, dict)
+        or raw != _canonical_json(value)
+    ):
+        _fail("COMMAND_INTENT_INVALID")
+    return value
+
+
 def _validate_commands(
     value: Mapping[str, Any],
     packet: validate_worker_packet.ValidatedWorkerPacket,
@@ -131,9 +150,26 @@ def _validate_commands(
     by_log_path = {item["log_path"]: item for item in verification}
     artifact_limit = packet.value["verification"]["max_artifact_bytes"]
     for index, argv in enumerate(packet.required_commands):
+        intent_path = outbox / f"command-{index:03d}.intent.json"
         record_path = outbox / f"command-{index:03d}.json"
+        if intent_path.exists() or intent_path.is_symlink():
+            intent = _read_command_intent(intent_path, artifact_limit)
+            if intent != {
+                "schema_version": "beads.worker-command-intent.v1",
+                "run_id": packet.value["run_id"],
+                "attempt_id": packet.value["attempt_id"],
+                "issue_id": packet.value["issue"]["id"],
+                "packet_sha256": packet.packet_sha256,
+                "ownership_epoch": ownership_epoch,
+                "command_index": index,
+                "argv": list(argv),
+                "safe_next_action": "start_new_attempt",
+            }:
+                _fail("COMMAND_INTENT_IDENTITY_MISMATCH")
         if not record_path.exists() and not record_path.is_symlink():
             continue
+        if not intent_path.exists() or intent_path.is_symlink():
+            _fail("COMMAND_INTENT_MISSING")
         record = _read_command_record(record_path, artifact_limit)
         required_keys = {
             "schema_version",
@@ -244,7 +280,9 @@ def _validate_status(value: Mapping[str, Any], packet: Mapping[str, Any]) -> Non
         _fail("COMPLETED_AC_UNSUPPORTED")
 
 
-def _validate_frozen_artifact(value: Mapping[str, Any]) -> None:
+def _validate_frozen_artifact(
+    value: Mapping[str, Any], artifacts: Mapping[str, Mapping[str, Any]]
+) -> None:
     mode = value["integration_mode"]
     frozen = value["worker_frozen_artifact"]
     if mode == "patch_package":
@@ -274,8 +312,20 @@ def _validate_frozen_artifact(value: Mapping[str, Any]) -> None:
             frozen["sha256"], hashlib.sha256(descriptor).hexdigest()
         ):
             _fail("COMMIT_ARTIFACT_HASH_MISMATCH")
-    elif frozen["type"] != "external_export" or frozen["path"] is None:
-        _fail("EXPORT_ARTIFACT_INVALID")
+    else:
+        if (
+            frozen["type"] != "external_export"
+            or frozen["path"] is None
+            or frozen["tree_sha"] is not None
+        ):
+            _fail("EXPORT_ARTIFACT_INVALID")
+        artifact = artifacts.get(frozen["path"])
+        if artifact is None:
+            _fail("EXPORT_ARTIFACT_MISSING")
+        if artifact["type"] != "external_export":
+            _fail("EXPORT_ARTIFACT_TYPE_MISMATCH")
+        if not hmac.compare_digest(artifact["sha256"], frozen["sha256"]):
+            _fail("EXPORT_ARTIFACT_HASH_MISMATCH")
 
 
 def validate_worker_execution_result(
@@ -344,6 +394,7 @@ def validate_worker_execution_result(
     artifacts = {item["path"]: item for item in value["artifacts"]}
     if len(artifacts) != len(value["artifacts"]):
         _fail("ARTIFACT_PATH_DUPLICATE")
+    _validate_frozen_artifact(value, artifacts)
     for artifact in artifacts.values():
         if artifact["size_bytes"] > expected["verification"]["max_artifact_bytes"]:
             _fail("ARTIFACT_TOO_LARGE")
@@ -354,13 +405,16 @@ def validate_worker_execution_result(
             outbox,
         )
     _validate_status(value, expected)
-    _validate_frozen_artifact(value)
     _validate_commands(value, packet, ownership_epoch, outbox, artifacts)
     allowed_entries = {
         "attempt.json",
         "result.json",
         "receipt.json",
         *(Path(path).name for path in artifacts),
+        *(
+            f"command-{index:03d}.intent.json"
+            for index in range(len(packet.required_commands))
+        ),
     }
     try:
         if any(entry.name not in allowed_entries for entry in outbox.iterdir()):

@@ -148,6 +148,19 @@ command and later register an uncontrolled raw log. Sensitive or ambiguous
 output is discarded by the safe boundary; it is never written first and
 redacted later.
 
+Before spawn, the worker immutably journals command intent. Exact completed
+evidence is returned idempotently; intent with missing or partial evidence is
+`COMMAND_OUTCOME_UNKNOWN`, retains the available artifact hashes, and may only
+continue in a new attempt. It is never rerun in the same attempt. Failure to
+publish any intent leaves the command untouched and retryable.
+
+This journal prevents unsafe re-execution after ambiguous crashes; it does not
+OS-sandbox or contain the effects of an arbitrary packet-declared executable.
+Without process-level OS containment, forbidden executable effects remain a
+policy and authorization boundary rather than something these modules can
+absolutely prevent. Tests use forbidden-effect spies at enforceable pre-spawn
+refusal seams, but those spies are not a substitute for OS containment.
+
 All command execution—including tests, builds, lint, Git inspection, and an
 authorized scoped local commit—uses that exact packet-bound path. If
 `skills/beads/scripts/worker_result.py run-command` or its
