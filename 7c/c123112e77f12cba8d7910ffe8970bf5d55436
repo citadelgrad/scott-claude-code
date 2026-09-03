@@ -1,0 +1,36 @@
+evaluation/beads-skill/harness/README.md
+  h_12ee2b2686c122 1-16
+evaluation/beads-skill/harness/evaluator.py
+  h_12ee2b2686c122 1-1850
+evaluation/beads-skill/manifests/evaluation-report-v1.schema.json
+  h_12ee2b2686c122 1-27
+evaluation/beads-skill/manifests/pair-receipt-v1.schema.json
+  h_12ee2b2686c122 1-23
+evaluation/beads-skill/manifests/release-v1.json
+  h_12ee2b2686c122 1-1156
+evaluation/beads-skill/public-reports/README.md
+  h_12ee2b2686c122 1-5
+evaluation/beads-skill/public-reports/not-evaluated-v1.json
+  h_12ee2b2686c122 1
+evaluation/beads-skill/public-reports/not-evaluated-v1.md
+  h_12ee2b2686c122 1-44
+scripts/tests/test_beads_skill_benchmark.py
+  h_12ee2b2686c122 1-618
+skills/beads/evals/README.md
+  h_12ee2b2686c122 1-46
+skills/beads/evals/public-dev/corpus-v1.json
+  h_12ee2b2686c122 1-918
+skills/beads/scripts/evaluate_skill.py
+  h_12ee2b2686c122 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7cc123112e77f12cba8d7910ffe8970bf5d55436",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
