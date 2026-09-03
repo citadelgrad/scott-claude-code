@@ -1,0 +1,40 @@
+scripts/tests/beads_contract/test_operation_result.py
+  h_12ee2b2686c122 6,234-306
+scripts/tests/beads_contract/test_safe_bd.py
+  h_12ee2b2686c122 3,42-117,146,169-196,298-487,550-551
+scripts/tests/beads_contract/test_schema_differential.py
+  h_12ee2b2686c122 104-205
+scripts/tests/beads_contract/test_worker_packet.py
+  h_12ee2b2686c122 85,141,146
+scripts/tests/fixtures/beads_contract/invalid/direct-operation-request-v1.json
+  h_12ee2b2686c122 5,11,13,15-17
+scripts/tests/fixtures/beads_contract/valid/direct-operation-request-v1.json
+  h_12ee2b2686c122 5,11,13,15-17
+scripts/tests/fixtures/beads_contract/valid/worker-packet-v1.json
+  h_12ee2b2686c122 71
+skills/beads/schemas/direct-operation-request-v1.schema.json
+  h_12ee2b2686c122 5-52,120-136,150-161,173-185,193-196
+skills/beads/schemas/operation-result-v1.schema.json
+  h_12ee2b2686c122 577-583
+skills/beads/schemas/run-checkpoint-v1.schema.json
+  h_12ee2b2686c122 91
+skills/beads/schemas/worker-packet-v1.schema.json
+  h_12ee2b2686c122 430
+skills/beads/scripts/operation_result.py
+  h_12ee2b2686c122 25,70-86,90-92,240-242,319-365,399,401-402,404-405
+skills/beads/scripts/safe_bd.py
+  h_12ee2b2686c122 28-30,37,39,41,44,88-107,110-115,121-126,154-179,200-201,290,302-394,466,468-475,483,489-492,495-500,512-524,611-612,705-791,879,950-954,972,980-982,1005-1037,1066-1074,1118
+skills/beads/scripts/schema_runtime.py
+  h_12ee2b2686c122 11-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "52851c298d0899f03f8dd7ab9194323e36c54618",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
