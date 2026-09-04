@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent))
-import _common as common
+from . import _common as common
 
 RUN_ID = "run-0123456789abcdef-20260904T010000.000000Z-AAAAAAAC"
 

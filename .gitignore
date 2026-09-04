@@ -63,3 +63,9 @@ text_*_archived_replacement_*.json
 # ad hoc task scratch (baselines, plans, conflict matrices) — working notes
 # for an in-progress session, not durable project documentation
 .work/
+
+# pytest tmp_path base directory. pytest normally puts this under TMPDIR, but
+# falls back to the current working directory when TMPDIR is unusable (a full
+# disk, for one), which drops thousands of fixture files into the repo root.
+# Ignored so that fallback can never reach a commit.
+pytest-of-*/
