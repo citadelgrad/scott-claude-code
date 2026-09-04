@@ -40,6 +40,60 @@ _READONLY_GIT_COMMANDS = {
     "status",
 }
 _PORTABLE_PATH = re.compile(r"^[\x20-\x7e]+$")
+_GIT_GLOBAL_PATH_OVERRIDES = ("-C", "--git-dir", "--work-tree")
+
+
+def _git_global_path_override(argv: Sequence[str]) -> bool:
+    """Reject every global Git directory/work-tree override: execution is
+    bound to the packet's verified worktree and its common Git directory."""
+    return any(
+        arg in _GIT_GLOBAL_PATH_OVERRIDES
+        or arg.startswith("--git-dir=")
+        or arg.startswith("--work-tree=")
+        or arg.startswith("-C")
+        and arg != "-C"
+        for arg in argv[1:]
+    )
+
+
+def _bound_common_git_dir(worktree: Path, repository: Path) -> None:
+    """Fail unless the worktree's resolved common Git directory is the
+    repository root's own ``.git`` directory."""
+    dot_git = worktree / ".git"
+    if dot_git.is_symlink():
+        _fail("WORKTREE_NOT_GIT")
+    if dot_git.is_dir():
+        common = dot_git.resolve(strict=True)
+    elif dot_git.is_file():
+        try:
+            marker = dot_git.read_text(encoding="utf-8")
+            if not marker.startswith("gitdir: ") or not marker.endswith("\n"):
+                raise ValueError
+            gitdir = Path(marker[len("gitdir: ") : -1])
+            if not gitdir.is_absolute():
+                gitdir = dot_git.parent / gitdir
+            gitdir = gitdir.resolve(strict=True)
+            if gitdir.parent.name != "worktrees" or not gitdir.is_dir():
+                raise ValueError
+            commondir_text = (gitdir / "commondir").read_text(encoding="utf-8").strip()
+            if not commondir_text:
+                raise ValueError
+            common_path = Path(commondir_text)
+            if not common_path.is_absolute():
+                common_path = gitdir / common_path
+            common = common_path.resolve(strict=True)
+            backlink = (gitdir / "gitdir").read_text(encoding="utf-8").strip()
+            if Path(backlink).resolve(strict=True) != dot_git.resolve(strict=True):
+                raise ValueError
+        except (OSError, ValueError, UnicodeError):
+            _fail("WORKTREE_NOT_GIT")
+    else:
+        _fail("WORKTREE_NOT_GIT")
+    root_git = repository / ".git"
+    if not root_git.is_dir() or root_git.is_symlink():
+        _fail("WORKTREE_NOT_GIT")
+    if common != root_git.resolve(strict=True):
+        _fail("WORKTREE_NOT_GIT")
 
 
 class PacketValidationError(ValueError):
@@ -100,12 +154,8 @@ def _protected_write_scope(value: str) -> bool:
     )
 
 
-def _command_forbidden(
-    argv: Sequence[str], *, allow_local_commit: bool = False
-) -> bool:
-    if not argv:
-        return True
-    first = Path(argv[0]).name.casefold()
+def _executable_names(argv: Sequence[str]) -> tuple[str, str]:
+    first = Path(argv[0]).name.casefold() if argv else ""
     try:
         resolved_name = (
             Path(argv[0]).resolve(strict=True).name.casefold()
@@ -114,6 +164,22 @@ def _command_forbidden(
         )
     except OSError:
         resolved_name = first
+    return first, resolved_name
+
+
+def _is_git_command(argv: Sequence[str]) -> bool:
+    if not argv:
+        return False
+    first, resolved_name = _executable_names(argv)
+    return first == "git" or resolved_name == "git"
+
+
+def _command_forbidden(
+    argv: Sequence[str], *, allow_local_commit: bool = False
+) -> bool:
+    if not argv:
+        return True
+    first, resolved_name = _executable_names(argv)
     names = [Path(arg).name.casefold() for arg in argv]
     forbidden_executables = (
         {"bd", "beads"} | _SHELLS | _COMMAND_WRAPPERS | _REMOTE_COMMANDS
@@ -132,6 +198,8 @@ def _command_forbidden(
         if any(arg in ("-c", "-m") for arg in argv[1:]):
             return True
     if first == "git" or resolved_name == "git":
+        if _git_global_path_override(argv):
+            return True
         subcommand = next((arg for arg in argv[1:] if not arg.startswith("-")), None)
         allowed = set(_READONLY_GIT_COMMANDS)
         if allow_local_commit:
@@ -216,13 +284,17 @@ def validate_packet(
             "\x00" in arg for arg in command
         ):
             _fail("COMMAND_INVALID")
+        if _is_git_command(command):
+            _bound_common_git_dir(worktree, repository)
     allowed = frozenset([issue_id, *value["prerequisites"]["issue_ids"]])
     return ValidatedWorkerPacket(value, digest, commands, allowed)
 
 
 def authorize_command(packet: ValidatedWorkerPacket, argv: Sequence[str]) -> int:
     candidate = tuple(argv)
-    if _command_forbidden(candidate):
+    if _command_forbidden(
+        candidate, allow_local_commit=packet.value["scope"]["local_commit"]
+    ):
         _fail("FORBIDDEN_COMMAND")
     try:
         return packet.required_commands.index(candidate)

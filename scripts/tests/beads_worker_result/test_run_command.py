@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import subprocess
 import json
 import stat
 import sys
@@ -288,3 +289,47 @@ def test_failed_intent_publication_leaves_untouched_command_retryable(
         context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
     )
     assert evidence["safe_result"]["status"] == "SUCCESS"
+
+
+def test_run_command_executes_authorized_commit_mode_git_commands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _load(WORKER_RESULT, "beads_worker_result_commit_mode")
+    factory = _load(PACKET_TEST, f"commit_factory_{tmp_path.name}")
+    repo, lane, head = factory._git_lane(tmp_path)
+    (lane / "src.txt").write_text("change\n")
+    commands = [
+        [factory.GIT, "add", "-A"],
+        [factory.GIT, "commit", "-q", "-m", "work"],
+    ]
+    value = factory._packet(tmp_path)
+    value["repository"]["base_sha"] = head
+    value["scope"]["integration_mode"] = "commit"
+    value["scope"]["code_write"] = True
+    value["scope"]["local_commit"] = True
+    value["verification"]["required_commands"] = commands
+    raw = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    outbox = Path(value["verification"]["worker_outbox"])
+    outbox.chmod(0o700)
+    monkeypatch.chdir(value["repository"]["worktree"])
+    context = worker.initialize_attempt(
+        raw, expected_packet_sha256=digest, ownership_epoch=31
+    )
+
+    for index in (0, 1):
+        evidence = worker.run_declared_command(
+            context,
+            command_index=index,
+            sensitive_values_file=_descriptor(tmp_path, []),
+        )
+        assert evidence["safe_result"]["status"] == "SUCCESS"
+
+    new_head = subprocess.run(
+        [factory.GIT, "rev-parse", "HEAD"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert new_head != head

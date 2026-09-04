@@ -66,6 +66,21 @@ def _reconcile_existing_ownership(run_root: Path, issue_id: str) -> tuple[str, b
     return result.disposition, current_missing
 
 
+def _ownership_next_action(ownership: str) -> tuple[str | None, str]:
+    """Map ownership status to its disposition override and safe action.
+
+    Unknown or conflicting ownership never continues automatically: it
+    requires manual reconciliation and reports non-success.  A released or
+    unheld lease is safe, but continuation must go through the explicit
+    safe reacquisition path.
+    """
+    if ownership in {"unknown", "conflict"}:
+        return "manual_decision_required", "manual_reconciliation"
+    if ownership in {"released", "unheld"}:
+        return None, "reacquire_ownership_and_resume"
+    return None, "continue_from_accepted_checkpoint"
+
+
 def status(run_directory: Path) -> ReconciliationPlan:
     """Validate current durable state without creating or repairing anything."""
     run = Path(run_directory)
@@ -114,13 +129,14 @@ def status(run_directory: Path) -> ReconciliationPlan:
                     ownership,
                     "execute_bound_recovery_probe",
                 )
+            override, action = _ownership_next_action(ownership)
             return ReconciliationPlan(
-                "consistent",
+                override or "consistent",
                 manifest["run_id"],
                 reference.generation,
                 "valid",
                 ownership,
-                "continue_from_accepted_checkpoint",
+                action,
             )
     except state.StateError as exc:
         raise _translate(exc) from exc
@@ -507,13 +523,14 @@ def recover(run_directory: Path) -> ReconciliationPlan:
                     "execute_bound_recovery_probe",
                     tuple(repairs),
                 )
+            override, action = _ownership_next_action(ownership)
             return ReconciliationPlan(
-                "safe_to_retry" if repairs else "consistent",
+                override or ("safe_to_retry" if repairs else "consistent"),
                 manifest["run_id"],
                 reference.generation,
                 "valid",
                 ownership,
-                "continue_from_accepted_checkpoint",
+                action,
                 tuple(repairs),
             )
     except state.StateError as exc:

@@ -45,6 +45,7 @@ def _make_run(state, root: Path, suffix: str, secret: str) -> Path:
         request_id=f"request-{suffix}-000000",
         repository_root=str(root.parent.resolve()),
         workspace=str((root.parent / ".beads").resolve()),
+        workspace_identity_sha256="c" * 64,
         root_issue_id="root",
         run_root=str(root.resolve()),
         created_at="2026-09-03T12:00:00.000000Z",

@@ -22,9 +22,9 @@ def _load(path: Path, name: str) -> Any:
     return module
 
 
-def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, **mode: str):
     fixtures = _load(FINALIZE_TEST, f"result_contract_fixtures_{tmp_path.name}")
-    worker, context, candidate = fixtures._setup(tmp_path, monkeypatch)
+    worker, context, candidate = fixtures._setup(tmp_path, monkeypatch, **mode)
     descriptor = fixtures._descriptor(tmp_path, [])
     return fixtures, worker, context, candidate, descriptor
 
@@ -80,6 +80,60 @@ def test_terminal_status_without_required_evidence_is_refused(
     candidate[field] = empty
 
     with pytest.raises(worker.WorkerResultError, match="RESULT_SCHEMA_INVALID"):
+        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+
+
+@pytest.mark.parametrize(
+    ("status", "evidence"),
+    [
+        (
+            "failed",
+            {
+                "errors": [
+                    {
+                        "code": "CHECK_FAILED",
+                        "template_id": "check_failed",
+                        "field_path": "/verification/0",
+                        "parameters": [],
+                    }
+                ]
+            },
+        ),
+        ("blocked", {"blockers": ["dependency unavailable"]}),
+        ("cancelled", {"cancellation_reason": "parent cancelled"}),
+    ],
+)
+@pytest.mark.parametrize("mode", ["commit", "external_export"])
+def test_terminal_failure_may_be_artifact_less(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    status: str,
+    evidence: dict,
+    mode: str,
+) -> None:
+    fixtures, worker, context, candidate, descriptor = _setup(
+        tmp_path, monkeypatch, integration_mode=mode
+    )
+    candidate["status"] = status
+    candidate.update(evidence)
+    candidate["worker_frozen_artifact"] = None
+
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=descriptor
+    )
+
+    assert receipt["status"] == status
+
+
+def test_completed_commit_without_artifact_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, worker, context, candidate, descriptor = _setup(
+        tmp_path, monkeypatch, integration_mode="commit"
+    )
+    candidate["worker_frozen_artifact"] = None
+
+    with pytest.raises(worker.WorkerResultError, match="FROZEN_ARTIFACT_MISSING"):
         worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
 
 

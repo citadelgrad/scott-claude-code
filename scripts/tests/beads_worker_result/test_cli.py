@@ -34,7 +34,9 @@ def test_worker_result_and_validator_cli_complete_packet_bound_lifecycle(
     validator = _load(VALIDATOR, "beads_worker_result_validator_cli")
     factory = _load(PACKET_TEST, "worker_result_cli_packet_factory")
     result_factory = _load(FINALIZE_TEST, "worker_result_cli_result_factory")
+    repo, lane, head = factory._git_lane(tmp_path)
     packet = factory._packet(tmp_path)
+    packet["repository"]["base_sha"] = head
     packet["verification"]["required_commands"] = [["/usr/bin/printf", "ok"]]
     outbox = Path(packet["verification"]["worker_outbox"])
     outbox.chmod(0o700)

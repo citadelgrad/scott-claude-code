@@ -29,6 +29,7 @@ def _run_fixture(tmp_path: Path):
         request_id="request-reconcile-0001",
         repository_root=str(tmp_path.resolve()),
         workspace=str((tmp_path / ".beads").resolve()),
+        workspace_identity_sha256="c" * 64,
         root_issue_id="root",
         run_root=str(root.resolve()),
         created_at="2026-09-03T12:00:00.000000Z",
@@ -43,6 +44,7 @@ def _run_fixture(tmp_path: Path):
         "generation": 1,
         "root_issue_id": "root",
         "workspace": str((tmp_path / ".beads").resolve()),
+        "workspace_identity_sha256": "c" * 64,
         "repository_root": str(tmp_path.resolve()),
         "coordinator_session_id": None,
         "authority_snapshot_sha256": "2" * 64,
@@ -84,6 +86,112 @@ def _path_snapshot(root: Path) -> dict[str, tuple[int, int, int, int, str | None
     return snapshot
 
 
+def _acquire_root(root: Path, run: Path, *, operation_id: str = "a" * 64):
+    ownership = importlib.import_module("beads_ownership")
+    return ownership.OwnershipStore(root).acquire(
+        issue_id="root",
+        actor="tester",
+        run_directory=run,
+        tracker_state_sha256="0" * 64,
+        operation_id=operation_id,
+    )
+
+
+def test_status_unheld_ownership_requires_explicit_safe_reacquisition(
+    tmp_path: Path,
+) -> None:
+    _state, root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+
+    plan = reconcile.status(run)
+
+    assert plan.disposition == "consistent"
+    assert plan.ownership_status == "unheld"
+    assert plan.next_safe_action == "reacquire_ownership_and_resume"
+
+
+def test_status_unknown_ownership_requires_manual_reconciliation_non_success(
+    tmp_path: Path,
+) -> None:
+    import datetime as dt
+
+    _state, root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    ownership = importlib.import_module("beads_ownership")
+    _acquire_root(root, run)
+    with pytest.raises(ownership.OwnershipError, match="OWNERSHIP_LEASE_EXPIRED"):
+        ownership.OwnershipStore(root).renew(
+            "root",
+            run,
+            epoch=1,
+            operation_id="b" * 64,
+            now=dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1),
+        )
+
+    plan = reconcile.status(run)
+
+    assert plan.disposition == "manual_decision_required"
+    assert plan.ownership_status == "unknown"
+    assert plan.next_safe_action == "manual_reconciliation"
+
+
+def test_conflict_ownership_maps_to_manual_reconciliation() -> None:
+    reconcile = importlib.import_module("reconcile_run")
+
+    # A persisted conflict record (defensive store mapping) never continues
+    # automatically: it must report manual reconciliation non-success.
+    assert reconcile._ownership_next_action("conflict") == (
+        "manual_decision_required",
+        "manual_reconciliation",
+    )
+    assert reconcile._ownership_next_action("unknown") == (
+        "manual_decision_required",
+        "manual_reconciliation",
+    )
+
+
+def test_status_release_prepared_ownership_requires_manual_reconciliation(
+    tmp_path: Path,
+) -> None:
+    _state, root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    ownership = importlib.import_module("beads_ownership")
+    _acquire_root(root, run)
+
+    def crash_after_release_prepared(event: str) -> None:
+        if event == "after_ownership_current_publication":
+            raise RuntimeError("crash after release_prepared publication")
+
+    store = ownership.OwnershipStore(root, crash_hook=crash_after_release_prepared)
+    with pytest.raises(RuntimeError):
+        store.release("root", run, epoch=1, operation_id="e" * 64)
+
+    plan = reconcile.status(run)
+
+    assert plan.disposition == "manual_decision_required"
+    assert plan.ownership_status == "unknown"
+    assert plan.next_safe_action == "manual_reconciliation"
+
+
+def test_status_released_ownership_requires_explicit_safe_reacquisition(
+    tmp_path: Path,
+) -> None:
+    _state, root, run = _run_fixture(tmp_path)
+    reconcile = importlib.import_module("reconcile_run")
+    ownership = importlib.import_module("beads_ownership")
+    _acquire_root(root, run)
+    released = ownership.OwnershipStore(root).release(
+        "root", run, epoch=1, operation_id="d" * 64
+    )
+    assert released.disposition == "released"
+
+    plan = reconcile.status(run)
+
+    assert plan.disposition == "consistent"
+    assert plan.ownership_status == "released"
+    assert plan.next_safe_action == "reacquire_ownership_and_resume"
+
+
 def test_status_validates_journal_checkpoint_manifest_and_ownership_without_mutation(
     tmp_path: Path,
 ) -> None:
@@ -94,7 +202,7 @@ def test_status_validates_journal_checkpoint_manifest_and_ownership_without_muta
     after = _path_snapshot(run.parent)
     assert plan.disposition == "consistent"
     assert plan.accepted_generation == 1
-    assert plan.next_safe_action == "continue_from_accepted_checkpoint"
+    assert plan.next_safe_action == "reacquire_ownership_and_resume"
     assert before == after
     assert plan.local_fencing_limit == "cooperative_local_filesystem_only"
     assert root.exists()
@@ -438,6 +546,7 @@ def test_cli_exposes_only_readonly_status_and_filesystem_recover(
     assert value["operation"] == "recover"
     assert value["status"] == "success"
     assert value["authority"]["exercised"] == ["read"]
+    assert value["workspace"]["workspace_sha256"] == "c" * 64
 
     unknown = subprocess.run(
         [sys.executable, str(CLI), "start-run", "--run-dir", str(run)],

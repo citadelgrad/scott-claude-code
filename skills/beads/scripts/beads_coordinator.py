@@ -47,7 +47,7 @@ def _result(
         "root_issue_id": manifest["root_issue_id"],
         "workspace": {
             "repository_root": manifest["repository_root"],
-            "workspace_sha256": state.sha256_bytes(manifest["workspace"].encode()),
+            "workspace_sha256": manifest["workspace_identity_sha256"],
             "cli_version": "1.2.2",
         },
         "observed_changes": [],

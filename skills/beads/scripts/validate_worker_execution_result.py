@@ -9,12 +9,15 @@ import hmac
 import json
 import os
 import stat
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, NoReturn
 
 sys.path.insert(0, str(Path(__file__).parent))
+import external_export
+import lane_snapshot
 import schema_runtime
 import validate_worker_packet
 
@@ -281,7 +284,9 @@ def _validate_status(value: Mapping[str, Any], packet: Mapping[str, Any]) -> Non
 
 
 def _validate_frozen_artifact(
-    value: Mapping[str, Any], artifacts: Mapping[str, Mapping[str, Any]]
+    value: Mapping[str, Any],
+    artifacts: Mapping[str, Mapping[str, Any]],
+    packet: validate_worker_packet.ValidatedWorkerPacket,
 ) -> None:
     mode = value["integration_mode"]
     frozen = value["worker_frozen_artifact"]
@@ -290,7 +295,11 @@ def _validate_frozen_artifact(
             _fail("PATCH_MODE_HAS_FROZEN_ARTIFACT")
         return
     if frozen is None:
-        _fail("FROZEN_ARTIFACT_MISSING")
+        # Terminal failure states may be artifact-less; only a completed
+        # commit/external-export attempt must freeze a transfer artifact.
+        if value["status"] == "completed":
+            _fail("FROZEN_ARTIFACT_MISSING")
+        return
     if mode == "commit":
         if (
             frozen["type"] != "commit"
@@ -299,6 +308,7 @@ def _validate_frozen_artifact(
             or frozen["tree_sha"] is None
         ):
             _fail("COMMIT_ARTIFACT_INVALID")
+        _validate_commit_artifact(frozen, packet)
         descriptor = json.dumps(
             {
                 "identity": frozen["identity"],
@@ -316,7 +326,7 @@ def _validate_frozen_artifact(
         if (
             frozen["type"] != "external_export"
             or frozen["path"] is None
-            or frozen["tree_sha"] is not None
+            or frozen["tree_sha"] is None
         ):
             _fail("EXPORT_ARTIFACT_INVALID")
         artifact = artifacts.get(frozen["path"])
@@ -326,6 +336,92 @@ def _validate_frozen_artifact(
             _fail("EXPORT_ARTIFACT_TYPE_MISMATCH")
         if not hmac.compare_digest(artifact["sha256"], frozen["sha256"]):
             _fail("EXPORT_ARTIFACT_HASH_MISMATCH")
+
+
+def _validate_commit_artifact(
+    frozen: Mapping[str, Any],
+    packet: validate_worker_packet.ValidatedWorkerPacket,
+) -> None:
+    """Prove the frozen commit artifact against the physical repository."""
+    worktree = Path(packet.value["repository"]["worktree"])
+    base = packet.value["repository"]["base_sha"]
+    head = frozen["identity"]
+
+    def git(*args: str) -> bytes:
+        try:
+            return lane_snapshot.git_query(worktree, *args)
+        except lane_snapshot.LaneSnapshotError:
+            _fail("COMMIT_REPOSITORY_INVALID")
+
+    git("cat-file", "-e", f"{head}^{{commit}}")
+    physical_head = git("rev-parse", "HEAD").decode("utf-8", "strict").strip()
+    if not hmac.compare_digest(physical_head, head):
+        _fail("COMMIT_HEAD_MISMATCH")
+    tree = git("rev-parse", f"{head}^{{tree}}").decode("utf-8", "strict").strip()
+    if not hmac.compare_digest(tree, frozen["tree_sha"]):
+        _fail("COMMIT_TREE_MISMATCH")
+    try:
+        completed = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", base, head],
+            cwd=worktree,
+            capture_output=True,
+            timeout=lane_snapshot.GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        _fail("COMMIT_REPOSITORY_INVALID")
+    if completed.returncode != 0:
+        _fail("COMMIT_BASE_NOT_ANCESTOR")
+
+
+def _validate_external_export_package(
+    value: Mapping[str, Any],
+    artifacts: Mapping[str, Mapping[str, Any]],
+    packet: validate_worker_packet.ValidatedWorkerPacket,
+) -> None:
+    """Verify the frozen external artifact is exactly the canonical package."""
+    frozen = value["worker_frozen_artifact"]
+    if frozen is None or frozen.get("type") != "external_export":
+        return
+    package_path = Path(frozen["path"])
+    try:
+        data = package_path.read_bytes()
+    except OSError:
+        _fail("EXPORT_PACKAGE_INVALID")
+    try:
+        manifest = external_export.verify_package(
+            data, expected_base_sha=packet.value["repository"]["base_sha"]
+        )
+    except external_export.ExportPackageError as exc:
+        _fail(exc.code)
+    if not hmac.compare_digest(frozen["tree_sha"], manifest["tree_sha256"]):
+        _fail("EXPORT_PACKAGE_TREE_MISMATCH")
+    if not hmac.compare_digest(frozen["identity"], manifest["tree_sha256"]):
+        _fail("EXPORT_PACKAGE_IDENTITY_MISMATCH")
+    artifact = artifacts[frozen["path"]]
+    if artifact["size_bytes"] != len(data):
+        _fail("EXPORT_PACKAGE_SIZE_MISMATCH")
+
+
+def _validate_lane_snapshot(
+    value: Mapping[str, Any],
+    packet: validate_worker_packet.ValidatedWorkerPacket,
+) -> None:
+    """Recompute the canonical lane snapshot from the filesystem and reject
+    any caller drift between the result and the physical worktree."""
+    try:
+        snapshot = lane_snapshot.capture(
+            Path(packet.value["repository"]["worktree"]),
+            packet.value["repository"]["base_sha"],
+            exclude=Path(packet.value["verification"]["worker_outbox"]),
+        )
+    except lane_snapshot.LaneSnapshotError as exc:
+        _fail(exc.code)
+    if value["repository"]["head_sha"] != snapshot.head_sha:
+        _fail("RESULT_HEAD_DRIFT")
+    if value["lane_state"] != snapshot.lane_state:
+        _fail("RESULT_LANE_STATE_DRIFT")
+    if value["changes"]["paths"] != list(snapshot.changed_paths):
+        _fail("RESULT_CHANGED_PATHS_DRIFT")
 
 
 def validate_worker_execution_result(
@@ -394,7 +490,7 @@ def validate_worker_execution_result(
     artifacts = {item["path"]: item for item in value["artifacts"]}
     if len(artifacts) != len(value["artifacts"]):
         _fail("ARTIFACT_PATH_DUPLICATE")
-    _validate_frozen_artifact(value, artifacts)
+    _validate_frozen_artifact(value, artifacts, packet)
     for artifact in artifacts.values():
         if artifact["size_bytes"] > expected["verification"]["max_artifact_bytes"]:
             _fail("ARTIFACT_TOO_LARGE")
@@ -404,7 +500,9 @@ def validate_worker_execution_result(
             artifact["sha256"],
             outbox,
         )
+    _validate_external_export_package(value, artifacts, packet)
     _validate_status(value, expected)
+    _validate_lane_snapshot(value, packet)
     _validate_commands(value, packet, ownership_epoch, outbox, artifacts)
     allowed_entries = {
         "attempt.json",

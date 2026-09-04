@@ -13,6 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 WORKER_RESULT = ROOT / "skills/beads/scripts/worker_result.py"
 PACKET_TEST = ROOT / "scripts/tests/beads_contract/test_worker_packet.py"
+LANE_SNAPSHOT = ROOT / "skills/beads/scripts/lane_snapshot.py"
 
 
 def _load(path: Path, name: str):
@@ -32,9 +33,13 @@ def _setup(
 ) -> tuple[Any, Any, dict]:
     worker = _load(WORKER_RESULT, f"beads_worker_finalize_{tmp_path.name}")
     factory = _load(PACKET_TEST, f"finalize_packet_factory_{tmp_path.name}")
+    snapshot_module = _load(LANE_SNAPSHOT, f"beads_lane_snapshot_{tmp_path.name}")
+    repo, lane, head = factory._git_lane(tmp_path)
     packet = factory._packet(tmp_path)
+    packet["repository"]["base_sha"] = head
     packet["scope"]["integration_mode"] = integration_mode
     packet["scope"]["external_io"] = integration_mode == "external_export"
+    packet["scope"]["local_commit"] = integration_mode == "commit"
     packet["verification"]["required_commands"] = [["/usr/bin/printf", "ok"]]
     raw = json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
     digest = hashlib.sha256(raw).hexdigest()
@@ -46,7 +51,7 @@ def _setup(
     evidence = worker.run_declared_command(
         context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
     )
-    return worker, context, _candidate(packet, digest, evidence)
+    return worker, context, _candidate(packet, digest, evidence, snapshot_module)
 
 
 def _descriptor(tmp_path: Path, values: list[str]) -> Path:
@@ -66,8 +71,23 @@ def _identity(path: Path, artifact_type: str) -> dict:
     }
 
 
-def _candidate(packet: dict, packet_digest: str, evidence: dict) -> dict:
+def _candidate(
+    packet: dict,
+    packet_digest: str,
+    evidence: dict,
+    snapshot_module: Any = None,
+) -> dict:
     outbox = Path(packet["verification"]["worker_outbox"])
+    if snapshot_module is None:
+        snapshot_module = _load(
+            LANE_SNAPSHOT,
+            f"beads_lane_snapshot_candidate_{packet['attempt_id']}",
+        )
+    snapshot = snapshot_module.capture(
+        Path(packet["repository"]["worktree"]),
+        packet["repository"]["base_sha"],
+        exclude=outbox,
+    )
     record = outbox / "command-000.json"
     stdout = Path(evidence["safe_result"]["stdout_log"]["path"])
     stderr = Path(evidence["safe_result"]["stderr_log"]["path"])
@@ -84,14 +104,13 @@ def _candidate(packet: dict, packet_digest: str, evidence: dict) -> dict:
             "worktree": packet["repository"]["worktree"],
             "branch": packet["repository"]["branch"],
             "base_sha": packet["repository"]["base_sha"],
-            "head_sha": packet["repository"]["base_sha"],
+            "head_sha": snapshot.head_sha,
         },
-        "lane_state": {
-            "tracked_diff_sha256": hashlib.sha256(b"").hexdigest(),
-            "untracked_inventory_sha256": hashlib.sha256(b"").hexdigest(),
-            "dirty": False,
+        "lane_state": snapshot.lane_state,
+        "changes": {
+            "paths": list(snapshot.changed_paths),
+            "outside_allowed_scope": [],
         },
-        "changes": {"paths": [], "outside_allowed_scope": []},
         "verification": [
             {
                 "command": argv_text,
@@ -257,29 +276,59 @@ def test_conflicting_receipt_is_preflighted_before_result_publication(
     assert receipt["summary"] == candidate["summary"]
 
 
+EXPORT_MODULE = ROOT / "skills/beads/scripts/external_export.py"
+
+
+def _prepare_canonical_export(worker: Any, context: Any, candidate: dict) -> dict:
+    """Create a real changed file and freeze the canonical export package."""
+    export_module = _load(EXPORT_MODULE, f"beads_export_{candidate['attempt_id']}")
+    snapshot_module = _load(
+        LANE_SNAPSHOT, f"beads_export_snapshot_{candidate['attempt_id']}"
+    )
+    lane = Path(candidate["repository"]["worktree"])
+    (lane / "src").mkdir()
+    (lane / "src" / "change.py").write_text("change\n")
+    package, manifest = export_module.build_package(
+        lane, candidate["repository"]["base_sha"], ["src/change.py"]
+    )
+    export = context.outbox / "worker-export.tar"
+    export.write_bytes(package)
+    export.chmod(0o600)
+    artifact = _identity(export, "external_export")
+    candidate["artifacts"].append(artifact)
+    candidate["worker_frozen_artifact"] = {
+        "type": "external_export",
+        "identity": manifest["tree_sha256"],
+        "path": str(export),
+        "sha256": artifact["sha256"],
+        "tree_sha": manifest["tree_sha256"],
+    }
+    snapshot = snapshot_module.capture(
+        lane, candidate["repository"]["base_sha"], exclude=context.outbox
+    )
+    candidate["repository"]["head_sha"] = snapshot.head_sha
+    candidate["lane_state"] = snapshot.lane_state
+    candidate["changes"] = {
+        "paths": list(snapshot.changed_paths),
+        "outside_allowed_scope": [],
+    }
+    return manifest
+
+
 def test_external_export_frozen_sha_must_match_verified_artifact(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     worker, context, candidate = _setup(
         tmp_path, monkeypatch, integration_mode="external_export"
     )
-    descriptor = _descriptor(tmp_path, [])
-    export = context.outbox / "worker-export.tar"
-    export.write_bytes(b"verified export")
-    export.chmod(0o600)
-    candidate["artifacts"].append(_identity(export, "external_export"))
-    candidate["worker_frozen_artifact"] = {
-        "type": "external_export",
-        "identity": "worker-export.tar",
-        "path": str(export),
-        "sha256": "0" * 64,
-        "tree_sha": None,
-    }
+    _prepare_canonical_export(worker, context, candidate)
+    candidate["worker_frozen_artifact"]["sha256"] = "0" * 64
 
     with pytest.raises(worker.WorkerResultError, match="EXPORT_ARTIFACT_HASH_MISMATCH"):
-        worker.finalize_attempt(context, candidate, sensitive_values_file=descriptor)
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
     assert not (context.outbox / "result.json").exists()
-    assert not (context.outbox / "receipt.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -287,7 +336,7 @@ def test_external_export_frozen_sha_must_match_verified_artifact(
     [
         ("path", "EXPORT_ARTIFACT_MISSING"),
         ("type", "EXPORT_ARTIFACT_TYPE_MISMATCH"),
-        ("tree_sha", "EXPORT_ARTIFACT_INVALID"),
+        ("tree_sha", "EXPORT_PACKAGE_TREE_MISMATCH"),
         ("actual_size", "ARTIFACT_SIZE_MISMATCH"),
         ("actual_hash", "ARTIFACT_HASH_MISMATCH"),
     ],
@@ -301,18 +350,8 @@ def test_external_export_contract_precedes_actual_file_verification(
     worker, context, candidate = _setup(
         tmp_path, monkeypatch, integration_mode="external_export"
     )
-    export = context.outbox / "worker-export.tar"
-    export.write_bytes(b"verified export")
-    export.chmod(0o600)
-    artifact = _identity(export, "external_export")
-    candidate["artifacts"].append(artifact)
-    candidate["worker_frozen_artifact"] = {
-        "type": "external_export",
-        "identity": "worker-export.tar",
-        "path": str(export),
-        "sha256": artifact["sha256"],
-        "tree_sha": None,
-    }
+    _prepare_canonical_export(worker, context, candidate)
+    export = Path(candidate["worker_frozen_artifact"]["path"])
     if defect == "path":
         candidate["worker_frozen_artifact"]["path"] = str(
             context.outbox / "different-export.tar"
@@ -322,9 +361,12 @@ def test_external_export_contract_precedes_actual_file_verification(
     elif defect == "tree_sha":
         candidate["worker_frozen_artifact"]["tree_sha"] = "a" * 40
     elif defect == "actual_size":
-        export.write_bytes(b"verified export with trailing data")
+        with export.open("ab") as stream:
+            stream.write(b"x")
     else:
-        export.write_bytes(b"x" * len(b"verified export"))
+        raw = bytearray(export.read_bytes())
+        raw[0] ^= 1
+        export.write_bytes(bytes(raw))
 
     with pytest.raises(worker.WorkerResultError, match=error_code):
         worker.finalize_attempt(
@@ -340,6 +382,181 @@ def test_external_export_exact_contract_finalizes(
     worker, context, candidate = _setup(
         tmp_path, monkeypatch, integration_mode="external_export"
     )
+    manifest = _prepare_canonical_export(worker, context, candidate)
+
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    assert receipt["status"] == "completed"
+    result = json.loads((context.outbox / "result.json").read_text())
+    assert result["worker_frozen_artifact"]["tree_sha"] == manifest["tree_sha256"]
+    assert result["worker_frozen_artifact"]["identity"] == manifest["tree_sha256"]
+
+
+def _commit_artifact(head: str, tree: str) -> dict:
+    descriptor = json.dumps(
+        {"identity": head, "tree_sha": tree, "type": "commit"},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return {
+        "type": "commit",
+        "identity": head,
+        "path": None,
+        "sha256": hashlib.sha256(descriptor).hexdigest(),
+        "tree_sha": tree,
+    }
+
+
+def _lane_commit(worker: Any, context: Any, candidate: dict) -> tuple[str, str]:
+    """Make one real commit in the lane and refresh the candidate snapshot."""
+    import subprocess
+
+    factory = _load(PACKET_TEST, f"commit_lane_factory_{candidate['attempt_id']}")
+    lane = Path(candidate["repository"]["worktree"])
+    (lane / "src").mkdir()
+    (lane / "src" / "change.py").write_text("change\n")
+    for argv in (
+        [factory.GIT, "add", "-A"],
+        [factory.GIT, "commit", "-q", "-m", "work"],
+    ):
+        subprocess.run(argv, cwd=lane, check=True, capture_output=True)
+    head = subprocess.run(
+        [factory.GIT, "rev-parse", "HEAD"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    tree = subprocess.run(
+        [factory.GIT, "rev-parse", "HEAD^{tree}"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    snapshot_module = _load(
+        LANE_SNAPSHOT, f"beads_lane_snapshot_recheck_{candidate['attempt_id']}"
+    )
+    snapshot = snapshot_module.capture(
+        lane, candidate["repository"]["base_sha"], exclude=context.outbox
+    )
+    candidate["repository"]["head_sha"] = snapshot.head_sha
+    candidate["lane_state"] = snapshot.lane_state
+    candidate["changes"] = {
+        "paths": list(snapshot.changed_paths),
+        "outside_allowed_scope": [],
+    }
+    return head, tree
+
+
+def test_commit_artifact_tree_must_match_real_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="commit"
+    )
+    head, tree = _lane_commit(worker, context, candidate)
+    candidate["worker_frozen_artifact"] = _commit_artifact(head, "0" * 40)
+
+    with pytest.raises(worker.WorkerResultError, match="COMMIT_TREE_MISMATCH"):
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert not (context.outbox / "result.json").exists()
+
+
+def test_commit_artifact_requires_base_ancestry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    worker = _load(WORKER_RESULT, f"beads_worker_finalize_anc_{tmp_path.name}")
+    factory = _load(PACKET_TEST, f"anc_factory_{tmp_path.name}")
+    snapshot_module = _load(LANE_SNAPSHOT, f"anc_snapshot_{tmp_path.name}")
+    repo, lane, head = factory._git_lane(tmp_path)
+    orphan = subprocess.run(
+        [factory.GIT, "commit-tree", f"{head}^{{tree}}", "-m", "orphan"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert orphan != head
+    packet = factory._packet(tmp_path)
+    packet["repository"]["base_sha"] = orphan
+    packet["scope"]["integration_mode"] = "commit"
+    packet["scope"]["code_write"] = True
+    packet["scope"]["local_commit"] = True
+    packet["verification"]["required_commands"] = [["/usr/bin/printf", "ok"]]
+    raw = json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    Path(packet["verification"]["worker_outbox"]).chmod(0o700)
+    monkeypatch.chdir(lane)
+    context = worker.initialize_attempt(
+        raw, expected_packet_sha256=digest, ownership_epoch=41
+    )
+    evidence = worker.run_declared_command(
+        context, command_index=0, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    candidate = _candidate(packet, digest, evidence, snapshot_module)
+    (lane / "src").mkdir()
+    (lane / "src" / "change.py").write_text("change\n")
+    for argv in (
+        [factory.GIT, "add", "-A"],
+        [factory.GIT, "commit", "-q", "-m", "work"],
+    ):
+        subprocess.run(argv, cwd=lane, check=True, capture_output=True)
+    lane_head = subprocess.run(
+        [factory.GIT, "rev-parse", "HEAD"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    lane_tree = subprocess.run(
+        [factory.GIT, "rev-parse", "HEAD^{tree}"],
+        cwd=lane,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    snapshot = snapshot_module.capture(lane, orphan, exclude=context.outbox)
+    candidate["repository"]["head_sha"] = snapshot.head_sha
+    candidate["lane_state"] = snapshot.lane_state
+    candidate["changes"] = {
+        "paths": list(snapshot.changed_paths),
+        "outside_allowed_scope": [],
+    }
+    candidate["worker_frozen_artifact"] = _commit_artifact(lane_head, lane_tree)
+
+    with pytest.raises(worker.WorkerResultError, match="COMMIT_BASE_NOT_ANCESTOR"):
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+
+
+def test_commit_artifact_of_real_commit_finalizes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="commit"
+    )
+    head, tree = _lane_commit(worker, context, candidate)
+    candidate["worker_frozen_artifact"] = _commit_artifact(head, tree)
+
+    receipt = worker.finalize_attempt(
+        context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+    )
+    assert receipt["status"] == "completed"
+
+
+def test_external_export_rejects_arbitrary_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(
+        tmp_path, monkeypatch, integration_mode="external_export"
+    )
     export = context.outbox / "worker-export.tar"
     export.write_bytes(b"verified export")
     export.chmod(0o600)
@@ -347,13 +564,62 @@ def test_external_export_exact_contract_finalizes(
     candidate["artifacts"].append(artifact)
     candidate["worker_frozen_artifact"] = {
         "type": "external_export",
-        "identity": "worker-export.tar",
+        "identity": "arbitrary-bytes",
         "path": str(export),
         "sha256": artifact["sha256"],
-        "tree_sha": None,
+        "tree_sha": "a" * 40,
     }
 
+    with pytest.raises(worker.WorkerResultError, match="EXPORT_PACKAGE_INVALID"):
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert not (context.outbox / "result.json").exists()
+
+
+def test_finalize_rejects_caller_lane_state_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
+    candidate["lane_state"]["tracked_diff_sha256"] = "0" * 64
+
+    with pytest.raises(worker.WorkerResultError, match="RESULT_LANE_STATE_DRIFT"):
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert not (context.outbox / "result.json").exists()
+
+
+def test_finalize_rejects_caller_head_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
+    candidate["repository"]["head_sha"] = "0" * 40
+
+    with pytest.raises(worker.WorkerResultError, match="RESULT_HEAD_DRIFT"):
+        worker.finalize_attempt(
+            context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
+        )
+    assert not (context.outbox / "result.json").exists()
+
+
+def test_parent_validation_rejects_post_finalization_worktree_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker, context, candidate = _setup(tmp_path, monkeypatch)
     receipt = worker.finalize_attempt(
         context, candidate, sensitive_values_file=_descriptor(tmp_path, [])
     )
     assert receipt["status"] == "completed"
+    (Path(candidate["repository"]["worktree"]) / "late.txt").write_text("late\n")
+
+    with pytest.raises(
+        worker.validate_worker_execution_result.WorkerExecutionResultError,
+        match="RESULT_LANE_STATE_DRIFT",
+    ):
+        worker.validate_worker_execution_result.validate_finalized_attempt(
+            result_path=context.outbox / "result.json",
+            receipt_path=context.outbox / "receipt.json",
+            packet=context.packet,
+            ownership_epoch=21,
+        )

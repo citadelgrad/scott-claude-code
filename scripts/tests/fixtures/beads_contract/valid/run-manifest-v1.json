@@ -19,5 +19,6 @@
   "run_root": "/tmp/x",
   "run_secret_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "schema_version": "beads.run-manifest.v1",
-  "workspace": "/tmp/x"
+  "workspace": "/tmp/x",
+  "workspace_identity_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 }

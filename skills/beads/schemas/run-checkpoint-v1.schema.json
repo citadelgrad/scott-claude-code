@@ -588,25 +588,30 @@
       "minLength": 1,
       "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
       "type": "string"
+    },
+    "workspace_identity_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
     }
   },
   "required": [
-    "schema_version",
-    "run_id",
-    "generation",
-    "root_issue_id",
-    "workspace",
-    "repository_root",
-    "coordinator_session_id",
     "authority_snapshot_sha256",
-    "phase",
     "budget",
+    "coordinator_session_id",
+    "created_at",
+    "generation",
+    "issue_snapshot_sha256",
     "issues",
     "operation_journal_path",
-    "issue_snapshot_sha256",
-    "ready_front_sha256",
+    "phase",
     "previous_checkpoint_sha256",
-    "created_at"
+    "ready_front_sha256",
+    "repository_root",
+    "root_issue_id",
+    "run_id",
+    "schema_version",
+    "workspace",
+    "workspace_identity_sha256"
   ],
   "title": "run-checkpoint v1",
   "type": "object"

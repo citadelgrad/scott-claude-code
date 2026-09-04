@@ -4,13 +4,56 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 MODULE = ROOT / "skills/beads/scripts/validate_worker_packet.py"
+GIT: str = cast(str, shutil.which("git"))
+
+
+def _git_lane(tmp_path: Path) -> tuple[Path, Path, str]:
+    """Build a real repository with one linked worktree lane and return HEAD."""
+    assert GIT is not None
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("base\n")
+    subprocess.run(
+        [GIT, "init", "-q", "-b", "main"], cwd=repo, check=True, capture_output=True
+    )
+    subprocess.run(
+        [GIT, "config", "user.email", "worker@example.test"], cwd=repo, check=True
+    )
+    subprocess.run([GIT, "config", "user.name", "worker"], cwd=repo, check=True)
+    subprocess.run([GIT, "add", "-A"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        [GIT, "commit", "-q", "-m", "base"], cwd=repo, check=True, capture_output=True
+    )
+    head = subprocess.run(
+        [GIT, "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    subprocess.run(
+        [GIT, "worktree", "add", "-q", str(repo / "lane"), "-b", "lane"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    return repo, repo / "lane", head
+
+
+def _commit_packet(tmp_path: Path, commands: list[list[str]]) -> dict:
+    repo, lane, head = _git_lane(tmp_path)
+    value = _packet(tmp_path)
+    value["repository"]["base_sha"] = head
+    value["scope"]["integration_mode"] = "commit"
+    value["scope"]["code_write"] = True
+    value["scope"]["local_commit"] = True
+    value["verification"]["required_commands"] = commands
+    return value
 
 
 def _load():
@@ -215,3 +258,91 @@ def test_packet_loader_rejects_float_duplicate_and_oversize(tmp_path: Path) -> N
         validator.validate_packet(b'{"x":1.0}')
     with pytest.raises(validator.PacketValidationError, match="PACKET_TOO_LARGE"):
         validator.validate_packet(b" " * 65537)
+
+
+def test_commit_mode_command_policy_is_canonical_at_admission_and_execution(
+    tmp_path: Path,
+) -> None:
+    validator = _load()
+    commands = [[GIT, "add", "-A"], [GIT, "commit", "-q", "-m", "work"]]
+    value = _commit_packet(tmp_path, commands)
+    raw = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+    packet = validator.validate_packet(
+        raw, expected_packet_sha256=hashlib.sha256(raw).hexdigest()
+    )
+
+    assert validator.authorize_command(packet, commands[0]) == 0
+    assert validator.authorize_command(packet, commands[1]) == 1
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        ["git", "-C", "/tmp", "status"],
+        ["git", "--git-dir=/tmp/.git", "status"],
+        ["git", "--work-tree", "/tmp", "status"],
+        [GIT, "-C", "/tmp", "status"],
+    ],
+)
+def test_packet_rejects_git_global_path_overrides(
+    tmp_path: Path, command: list[str]
+) -> None:
+    validator = _load()
+    value = _packet(tmp_path)
+    value["verification"]["required_commands"] = [command]
+
+    with pytest.raises(validator.PacketValidationError, match="FORBIDDEN_COMMAND"):
+        validator.validate_packet(
+            json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+        )
+
+
+def test_git_commands_require_worktree_bound_to_common_git_dir(
+    tmp_path: Path,
+) -> None:
+    validator = _load()
+    commands = [[GIT, "add", "-A"], [GIT, "commit", "-q", "-m", "work"]]
+    bound = _commit_packet(tmp_path, commands)
+    raw = json.dumps(bound, sort_keys=True, separators=(",", ":")).encode()
+    packet = validator.validate_packet(
+        raw, expected_packet_sha256=hashlib.sha256(raw).hexdigest()
+    )
+    assert packet.value["scope"]["local_commit"] is True
+
+    (tmp_path / "fresh").mkdir()
+    unbound = _packet(tmp_path / "fresh")
+    unbound["scope"]["integration_mode"] = "commit"
+    unbound["scope"]["code_write"] = True
+    unbound["scope"]["local_commit"] = True
+    unbound["verification"]["required_commands"] = commands
+    with pytest.raises(validator.PacketValidationError, match="WORKTREE_NOT_GIT"):
+        validator.validate_packet(
+            json.dumps(unbound, sort_keys=True, separators=(",", ":")).encode()
+        )
+
+
+def test_git_binding_rejects_worktree_from_foreign_repository(
+    tmp_path: Path,
+) -> None:
+    validator = _load()
+    commands = [[GIT, "add", "-A"], [GIT, "commit", "-q", "-m", "work"]]
+    value = _commit_packet(tmp_path, commands)
+    (tmp_path / "other").mkdir()
+    other_repo, _, _ = _git_lane(tmp_path / "other")
+    git_dir_marker = (Path(value["repository"]["worktree"]) / ".git").read_text()
+    foreign_git_dir = other_repo / ".git" / "worktrees" / "foreignlane"
+    foreign_git_dir.mkdir(parents=True)
+    (foreign_git_dir / "commondir").write_text(str(other_repo / ".git"))
+    (foreign_git_dir / "gitdir").write_text(
+        str(Path(value["repository"]["worktree"]) / ".git")
+    )
+    (Path(value["repository"]["worktree"]) / ".git").write_text(
+        "gitdir: " + str(foreign_git_dir) + "\n"
+    )
+    assert "gitdir" in git_dir_marker
+
+    with pytest.raises(validator.PacketValidationError, match="WORKTREE_NOT_GIT"):
+        validator.validate_packet(
+            json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+        )

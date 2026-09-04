@@ -168,6 +168,16 @@ authorized scoped local commit—uses that exact packet-bound path. If
 available, command execution is unavailable; do not fall back to a shell call
 or select `commit` transfer mode.
 
+One canonical command policy governs both packet admission and execution.
+`scope.local_commit` authority is applied at both seams, so a validated
+commit-mode packet's `git add`/`git commit` commands authorize and execute,
+while packets without that authority never do. Git global path overrides
+(`-C`, `--git-dir`, `--work-tree`) are always rejected: execution is bound to
+the packet-verified worktree (process cwd) and its common Git directory,
+which must resolve back to the repository root's `.git`. Any packet declaring
+a Git command must carry that verified worktree/common-dir binding at
+admission.
+
 Map each assigned acceptance ID to `supported`, `failed`, or `inconclusive`
 evidence. Name skipped checks and residual risks. File paths, sizes, modes, and
 hashes form a complete bounded inventory. A process exit code alone does not
@@ -212,6 +222,26 @@ logs or diffs.
 Only `commit` and `external_export` return an already immutable worker artifact.
 In `patch_package` mode, `completed` still describes mutable lane state; the
 parent must create and reproduce the separate lane freeze before verification.
+
+`failed`, `blocked`, and `cancelled` attempts may be artifact-less: terminal
+failure states never require a frozen transfer artifact. Only a `completed`
+`commit`/`external_export` result must freeze one, and the parent proves it
+against the physical repository before acceptance: a commit artifact must
+name a commit object and tree that exist, equal the worktree `HEAD`, descend
+from the packet `base_sha`, and match the recomputed changed-path inventory.
+An `external_export` artifact must be the canonical deterministic package: a
+tar archive whose first member is a canonical JSON manifest binding the packet
+base SHA, the sorted repo-relative inventory with modes/sizes/content hashes,
+and the reconstructed candidate-tree digest, followed by the inventoried
+contents with fixed (mtime/uid/gid 0) metadata. Arbitrary bytes are never a
+valid export.
+
+Worker finalization and parent validation share one canonical filesystem-derived
+lane snapshot (physical `HEAD`, tracked binary-diff hash against the base,
+normalized untracked inventory with content hashes, changed paths, dirty flag).
+Neither side trusts caller-supplied values: both recompute the snapshot from the
+worktree (excluding the attempt outbox) and reject drift, so any change after
+finalization invalidates the result.
 
 The small child receipt contains only terminal status, stable identities,
 finalized-result path/digest, and a sanitized one-line summary. It is an import

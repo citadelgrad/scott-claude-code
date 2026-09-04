@@ -363,7 +363,7 @@ def test_every_absolute_path_pattern_rejects_lexical_traversal() -> None:
                 collect(child)
 
     collect(schemas)
-    assert len(patterns) == 54
+    assert len(patterns) == 53
     for pattern in patterns:
         assert re.fullmatch(pattern, "/tmp/evidence.json")
         for attack in ("/../escape", "/./escape", "//escape", "/tmp/../escape"):

@@ -77,6 +77,11 @@ class StartRunInput:
     actor: str
     base_git_commit: str
     authority_snapshot_sha256: str
+    # Canonical safe_bd workspace identity digest, verified by the caller
+    # through safe_bd.workspace_identity_sha256 before bootstrap.  It is
+    # persisted here once and reused by checkpoints and operation results;
+    # recovery must never recompute it from the workspace path string.
+    workspace_identity_sha256: str
 
 
 @dataclass(frozen=True)
@@ -901,6 +906,8 @@ def _validate_start_input(request: StartRunInput) -> dict[str, Any]:
         raise StateError("BASE_GIT_COMMIT_INVALID")
     if not re.fullmatch(r"[0-9a-f]{64}", request.authority_snapshot_sha256):
         raise StateError("AUTHORITY_SNAPSHOT_INVALID")
+    if not re.fullmatch(r"[0-9a-f]{64}", request.workspace_identity_sha256):
+        raise StateError("WORKSPACE_IDENTITY_INVALID")
     physical: dict[str, str] = {}
     for field in ("repository_root", "git_common_dir", "workspace", "run_root"):
         supplied = Path(getattr(request, field))
@@ -934,6 +941,7 @@ def _validate_start_input(request: StartRunInput) -> dict[str, Any]:
         "actor": request.actor,
         "base_git_commit": request.base_git_commit,
         "authority_snapshot_sha256": request.authority_snapshot_sha256,
+        "workspace_identity_sha256": request.workspace_identity_sha256,
         "binding_limits": binding_limits(),
     }
 
@@ -1124,6 +1132,7 @@ def _empty_bootstrap_checkpoint(
         "generation": generation,
         "root_issue_id": manifest["root_issue_id"],
         "workspace": manifest["workspace"],
+        "workspace_identity_sha256": manifest["workspace_identity_sha256"],
         "repository_root": manifest["repository_root"],
         "coordinator_session_id": None,
         "authority_snapshot_sha256": authority_snapshot_sha256,
@@ -1200,6 +1209,7 @@ def bootstrap_run(
                 request_id=request.request_id,
                 repository_root=request.repository_root,
                 workspace=request.workspace,
+                workspace_identity_sha256=request.workspace_identity_sha256,
                 root_issue_id=request.root_issue_id,
                 created_at=now,
                 coordinator_version="beads-coordinator-v1",

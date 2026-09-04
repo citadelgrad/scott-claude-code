@@ -20,5 +20,6 @@
   "root_issue_id": "scc-x",
   "run_id": "run-0123456789abcdef-20260903T120000.000000Z-ABCDEFGH",
   "schema_version": "beads.run-checkpoint.v1",
-  "workspace": "/tmp/x"
+  "workspace": "/tmp/x",
+  "workspace_identity_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 }

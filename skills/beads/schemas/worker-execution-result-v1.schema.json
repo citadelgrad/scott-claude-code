@@ -103,63 +103,6 @@
       }
     },
     {
-      "else": {
-        "properties": {
-          "worker_frozen_artifact": {
-            "additionalProperties": false,
-            "properties": {
-              "identity": {
-                "maxLength": 4096,
-                "minLength": 1,
-                "pattern": "^[^\\x00]+$",
-                "type": "string"
-              },
-              "path": {
-                "anyOf": [
-                  {
-                    "maxLength": 4096,
-                    "minLength": 1,
-                    "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "sha256": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
-              "tree_sha": {
-                "anyOf": [
-                  {
-                    "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "type": {
-                "enum": [
-                  "commit",
-                  "external_export"
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "identity",
-              "path",
-              "sha256",
-              "tree_sha"
-            ],
-            "type": "object"
-          }
-        }
-      },
       "if": {
         "properties": {
           "integration_mode": {

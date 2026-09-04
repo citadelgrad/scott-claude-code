@@ -97,6 +97,7 @@ def test_manifest_publication_is_owner_only_and_recovers_one_exact_temp(
         request_id="request-identity-0001",
         repository_root=str(owner_root.parent.resolve()),
         workspace=str((owner_root.parent / ".beads").resolve()),
+        workspace_identity_sha256="c" * 64,
         root_issue_id="opaque/issue",
         run_root=str(owner_root.resolve()),
         created_at="2026-09-03T12:00:00.000000Z",
@@ -179,6 +180,7 @@ def test_manifest_recovery_fsyncs_existing_temp_before_rename(
         request_id="request-identity-0001",
         repository_root=str(owner_root.parent.resolve()),
         workspace=str((owner_root.parent / ".beads").resolve()),
+        workspace_identity_sha256="c" * 64,
         root_issue_id="opaque/issue",
         run_root=str(owner_root.resolve()),
         created_at="2026-09-03T12:00:00.000000Z",
@@ -358,6 +360,7 @@ def _checkpoint(state, run: Path, generation: int, previous: str) -> dict[str, o
         "generation": generation,
         "root_issue_id": "root",
         "workspace": str((run.parent.parent / ".beads").resolve()),
+        "workspace_identity_sha256": "c" * 64,
         "repository_root": str(run.parent.parent.resolve()),
         "coordinator_session_id": None,
         "authority_snapshot_sha256": "2" * 64,
@@ -527,6 +530,7 @@ def test_bootstrap_is_request_idempotent_and_publishes_pointer_before_active(
         actor="actor",
         base_git_commit="a" * 40,
         authority_snapshot_sha256="b" * 64,
+        workspace_identity_sha256="c" * 64,
     )
     callbacks = state.PointerCallbacks(observe=observe, publish=publish)
     first = state.bootstrap_run(
@@ -577,6 +581,51 @@ def test_bootstrap_is_request_idempotent_and_publishes_pointer_before_active(
         )
 
 
+def test_bootstrap_persists_canonical_workspace_identity(
+    state, owner_root: Path
+) -> None:
+    def observe(_expected: dict[str, object]):
+        return state.PointerObservation("prestate_unchanged", "0" * 64)
+
+    def publish(value: dict[str, object]):
+        return state.PointerObservation(
+            "intended_effect_present",
+            state.sha256_bytes(state.canonical_payload_bytes(value)),
+            observed_value=dict(value),
+        )
+
+    request = state.StartRunInput(
+        request_id="request-workspace-0001",
+        repository_root=str(owner_root.parent.resolve()),
+        git_common_dir=str((owner_root.parent / ".git").resolve()),
+        workspace=str((owner_root.parent / ".beads").resolve()),
+        run_root=str(owner_root.resolve()),
+        root_issue_id="root",
+        scope_issue_ids=(),
+        actor="actor",
+        base_git_commit="a" * 40,
+        authority_snapshot_sha256="b" * 64,
+        workspace_identity_sha256="c" * 64,
+    )
+    result = state.bootstrap_run(
+        request,
+        state.PointerCallbacks(observe=observe, publish=publish),
+        now="2026-09-03T12:00:00.000000Z",
+        run_id_factory=lambda: "run-4813494d137e1631-20260903T120000.000000Z-ABCDEFGH",
+        secret_factory=lambda: bytes.fromhex("ab" * 32),
+    )
+
+    run = owner_root / result.run_id
+    manifest = state.load_run_manifest(run)
+
+    assert manifest["workspace_identity_sha256"] == "c" * 64
+    assert manifest["workspace_identity_sha256"] != state.sha256_bytes(
+        manifest["workspace"].encode()
+    )
+    checkpoint = json.loads((run / "checkpoints" / "000001.json").read_text())
+    assert checkpoint["workspace_identity_sha256"] == "c" * 64
+
+
 @pytest.mark.parametrize(
     "malicious",
     [
@@ -600,6 +649,7 @@ def test_bootstrap_rejects_untruthful_pointer_callback(
         actor="actor",
         base_git_commit="a" * 40,
         authority_snapshot_sha256="b" * 64,
+        workspace_identity_sha256="c" * 64,
     )
 
     def observe(_expected: dict[str, object]):
