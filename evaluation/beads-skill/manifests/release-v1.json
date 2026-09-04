@@ -31,7 +31,7 @@
       "sha256": "2d17d349ab28ec6cdafa4f20efde56c9a6799e271e28a8721476d41e525aa49b"
     }
   },
-  "verifier_sha256": "bf1f9c8c780bdb4386de12c0111972a1876b89281b0e5d0919ac15279e6bd23f",
+  "verifier_sha256": "812bfea0e171515b3e080ced694f2ed09aca49af7f566fc62a10fca53a2938aa",
   "budget_profiles": {
     "R": {
       "timeout_s": 180,

@@ -31,5 +31,19 @@ validate_semantic_judgment = _MODULE.validate_semantic_judgment
 render_markdown = _MODULE.render_markdown
 main = _MODULE.main
 
+_ADAPTER_SPEC = importlib.util.spec_from_file_location(
+    "beads_skill_evidence_adapter",
+    _REPO / "evaluation/beads-skill/harness/evidence_adapter.py",
+)
+if _ADAPTER_SPEC is None or _ADAPTER_SPEC.loader is None:  # pragma: no cover
+    raise RuntimeError("cannot load Beads evidence adapter")
+_ADAPTER = importlib.util.module_from_spec(_ADAPTER_SPEC)
+sys.modules[_ADAPTER_SPEC.name] = _ADAPTER
+_ADAPTER_SPEC.loader.exec_module(_ADAPTER)
+
+ADAPTER_VERSION = _ADAPTER.ADAPTER_VERSION
+EVIDENCE_SCHEMA_VERSION = _ADAPTER.EVIDENCE_SCHEMA_VERSION
+adapt_runtime_evidence = _ADAPTER.adapt_runtime_evidence
+
 if __name__ == "__main__":
     raise SystemExit(main())

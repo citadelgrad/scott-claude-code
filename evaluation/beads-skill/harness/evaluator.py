@@ -625,10 +625,59 @@ def _frozen_scenario(run: Mapping[str, Any]) -> Mapping[str, Any]:
     return scenario
 
 
+CAPTURE_EVIDENCE_FIELDS = {
+    "worker_execution_result",
+    "run_checkpoint",
+    "operation_journal",
+    "bundle",
+}
+
+
+def _adapt_runtime_evidence(
+    worker_execution_result: Any,
+    run_checkpoint: Any,
+    operation_journal: Any,
+) -> dict[str, Any]:
+    adapter_path = Path(__file__).resolve().parent / "evidence_adapter.py"
+    spec = importlib.util.spec_from_file_location(
+        "beads_skill_evidence_adapter", adapter_path
+    )
+    if spec is None or spec.loader is None:
+        raise EvaluationError("EVIDENCE_ADAPTER_UNAVAILABLE", str(adapter_path))
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.adapt_runtime_evidence(
+        worker_execution_result, run_checkpoint, operation_journal
+    )
+
+
+def _validated_capture_evidence(run: Mapping[str, Any]) -> dict[str, Any]:
+    """Fail closed unless every scored event and outcome hash is re-derived."""
+    supplied = run["capture_evidence"]
+    if not isinstance(supplied, Mapping):
+        raise EvaluationError("CAPTURE_EVIDENCE_MISSING", "capture_evidence")
+    if set(supplied) != CAPTURE_EVIDENCE_FIELDS:
+        raise EvaluationError("CAPTURE_EVIDENCE_INVALID", "closed fields required")
+    derived = _adapt_runtime_evidence(
+        supplied["worker_execution_result"],
+        supplied["run_checkpoint"],
+        supplied["operation_journal"],
+    )
+    if canonical_bytes(supplied["bundle"]) != canonical_bytes(derived):
+        raise EvaluationError("CAPTURE_EVIDENCE_MISMATCH", "capture_evidence")
+    if list(run["events"]) != derived["events"]:
+        raise EvaluationError("EVIDENCE_DERIVATION_MISMATCH", "events")
+    if list(run["outcome_checks"]) != derived["outcome_checks"]:
+        raise EvaluationError("EVIDENCE_DERIVATION_MISMATCH", "outcome_checks")
+    return derived
+
+
 def score_run(run: Mapping[str, Any]) -> dict[str, Any]:
     """Score deterministic evidence; semantic judge data cannot affect the result."""
     _scan_controlled(run)
     required = {
+        "capture_evidence",
         "skill_sha256",
         "corpus_sha256",
         "verifier_sha256",
@@ -671,6 +720,7 @@ def score_run(run: Mapping[str, Any]) -> dict[str, Any]:
     for field, frozen_value in frozen_fields.items():
         if run.get(field) != frozen_value:
             raise EvaluationError("FROZEN_SCENARIO_DRIFT", field)
+    _validated_capture_evidence(run)
     events = normalize_trajectory(run["events"])
     task_id = _safe_text(run["task_id"], "task_id")
     assertions = run["required_assertions"]
@@ -1556,12 +1606,39 @@ def aggregate_results(
 
 
 def check_thresholds(
-    report: Mapping[str, Any], manifest: Mapping[str, Any]
+    report: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Apply frozen thresholds; aggregate scores cannot mask hard failures."""
+    """Apply frozen thresholds; aggregate scores cannot mask hard failures.
+
+    Fail-closed chain: the report is only trusted if it can be recomputed
+    byte-for-byte from the immutable pair receipts, the manifest provenance
+    (verifier/source/budget hashes) verifies, the frozen release matrix is
+    nonzero and unblocked, and the manifest status is release-eligible.
+    """
     _verify_manifest(manifest)
     _validate_report(report, with_hash=True)
     failures: list[str] = []
+    status = manifest.get("status")
+    if status != "frozen":
+        failures.append(f"manifest_status:{status}")
+    matrix_contract = manifest.get("release_matrix") or {}
+    blocker = matrix_contract.get("blocker")
+    if blocker:
+        failures.append("release_matrix:blocker")
+    if (
+        not matrix_contract.get("scenario_ids")
+        or not matrix_contract.get("strata")
+        or not (matrix_contract.get("repeats") or 0) >= 1
+    ):
+        failures.append("release_matrix:empty")
+    record_list = list(records)
+    if not record_list:
+        failures.append("records:empty")
+    recomputed = aggregate_results(record_list, manifest)
+    if canonical_bytes(recomputed) != canonical_bytes(dict(report)):
+        raise EvaluationError("REPORT_RECOMPUTE_MISMATCH", "report")
     thresholds = manifest["thresholds_millionths"]
     missing_treatments = set(manifest["required_treatments"]) - set(
         report["treatments"]
@@ -1790,6 +1867,12 @@ def _parser() -> argparse.ArgumentParser:
     checks = commands.add_parser("check-thresholds")
     checks.add_argument("--report", type=Path, required=True)
     checks.add_argument("--manifest", type=Path, required=True)
+    checks.add_argument("--records", type=Path, required=True)
+    adapt = commands.add_parser("adapt-evidence")
+    adapt.add_argument("--worker-result", type=Path, required=True)
+    adapt.add_argument("--checkpoint", type=Path, required=True)
+    adapt.add_argument("--journal", type=Path)
+    adapt.add_argument("--output", type=Path, required=True)
     return parser
 
 
@@ -1823,8 +1906,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 3 if hard_failed else 0
         elif args.command == "aggregate":
             manifest = _load(args.manifest)
-            value = aggregate_results(_load(args.records), manifest)
-            threshold_result = check_thresholds(value, manifest)
+            records = _load(args.records)
+            value = aggregate_results(records, manifest)
+            threshold_result = check_thresholds(value, manifest, records)
             _write_json(args.json_output, value)
             args.markdown_output.parent.mkdir(parents=True, exist_ok=True)
             args.markdown_output.write_text(
@@ -1832,8 +1916,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(json.dumps(threshold_result, sort_keys=True))
             return 0 if threshold_result["passed"] else 3
+        elif args.command == "adapt-evidence":
+            journal = _load(args.journal) if args.journal else []
+            if not isinstance(journal, list):
+                raise EvaluationError("EVIDENCE_JOURNAL_INVALID", "journal")
+            value = _adapt_runtime_evidence(
+                _load(args.worker_result), _load(args.checkpoint), journal
+            )
+            _write_json(args.output, value)
+            print(json.dumps(value, sort_keys=True))
+            return 0
         else:
-            value = check_thresholds(_load(args.report), _load(args.manifest))
+            value = check_thresholds(
+                _load(args.report), _load(args.manifest), _load(args.records)
+            )
             print(json.dumps(value, sort_keys=True))
             return 0 if value["passed"] else 3
         print(json.dumps(value, sort_keys=True))

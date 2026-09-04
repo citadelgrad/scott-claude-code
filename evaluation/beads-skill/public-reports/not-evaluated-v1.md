@@ -1,7 +1,7 @@
 # Beads Skill Evaluation Report
 
 - Corpus: `03be9aafd2e39605e7a31d82bedff9d5d24061d7b2dddb1986fa78fa26b975c6`
-- Verifier: `bf1f9c8c780bdb4386de12c0111972a1876b89281b0e5d0919ac15279e6bd23f`
+- Verifier: `812bfea0e171515b3e080ced694f2ed09aca49af7f566fc62a10fca53a2938aa`
 - Records: 0
 - Release gates: **FAIL**
 
@@ -38,7 +38,10 @@
 
 - candidate_skill:local_gap_incremental_lift
 - execution_matrix:incomplete
+- manifest_status:release-blocked-alternative-stratum-unfrozen
 - missing_treatment:candidate_skill
 - missing_treatment:no_skill
 - missing_treatment:upstream_skill
 - model_harness_strata:incomplete
+- records:empty
+- release_matrix:blocker
