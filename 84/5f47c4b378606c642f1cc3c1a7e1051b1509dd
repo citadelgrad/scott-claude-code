@@ -1,0 +1,57 @@
+scripts/tests/beads_integration/test_audit_regressions.py
+  s_a00c65db140d34::t_8be0b91f822e38 1-721
+skills/beads/scripts/coordinator_integration.py
+  s_a00c65db140d34::t_914fd13bf1fbc8 17,506-510,516-522,661,678,685-688,694-701,733,768,1207-1211,1343-1357,1386-1400,1403-1404,1406-1408,1457-1466,1473-1476,1529,1531-1533,1535-1545,1811-1819,1828-1880,1886-1887,1892
+skills/beads/scripts/package_lane.py
+  s_a00c65db140d34::t_5efaa937de77ce 11-16,119,126-130,140-141,224,226-233,250,286-288
+skills/beads/scripts/validate_worker_packet.py
+  s_a00c65db140d34::t_5001818a160161 12,165-172,302-311
+scripts/tests/beads_integration/test_candidate_flow.py
+  s_43f142630b7190::t_b6edf2b70793d2 382-384,396-400
+skills/beads/schemas/lane-freeze-v1.schema.json
+  s_a00c65db140d34::t_0c644b73a9cefa 69
+skills/beads/scripts/schema_runtime.py
+  s_74ef0946a28df2::t_c22261a9ca7dc2 11-13
+skills/beads/scripts/validate_lane_freeze.py
+  s_20ed34ca090f67::t_88e033cfa91dad 125-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "845f47c4b378606c642f1cc3c1a7e1051b1509dd",
+  "prompts": {},
+  "sessions": {
+    "s_20ed34ca090f67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af3d88bff1276cd77",
+        "model": "unknown"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    },
+    "s_43f142630b7190": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab709ac02000ffea8",
+        "model": "unknown"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    },
+    "s_74ef0946a28df2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af87d8e92361b5526",
+        "model": "unknown"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    },
+    "s_a00c65db140d34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44259016-efee-4f82-857f-2ae96aa76d44",
+        "model": "unknown"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
