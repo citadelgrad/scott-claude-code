@@ -21,6 +21,18 @@ MODULE = SCRIPTS / "package_lane.py"
 _counter = {"n": 0}
 
 
+def _member_bytes(tar: tarfile.TarFile, name: str) -> bytes:
+    """Read one archive member, failing loudly when it has no payload.
+
+    ``TarFile.extractfile`` returns None for directories and links, so the
+    caller must prove the member it asked for is a regular file.
+    """
+    handle = tar.extractfile(name)
+    assert handle is not None, f"archive member has no payload: {name}"
+    with handle:
+        return handle.read()
+
+
 def _load(path: Path):
     _counter["n"] += 1
     spec = importlib.util.spec_from_file_location(
@@ -197,12 +209,10 @@ def test_reproduction_detects_tampered_candidate(tmp_path: Path) -> None:
     # the source lane by one byte and must not report "reproduced".
     with tarfile.open(fileobj=io.BytesIO(built.archive_bytes)) as tar:
         members = {
-            name: (
-                None if tar.getmember(name).issym() else tar.extractfile(name).read()
-            )
+            name: (None if tar.getmember(name).issym() else _member_bytes(tar, name))
             for name in tar.getnames()
         }
-        manifest = json.loads(tar.extractfile("manifest.json").read())
+        manifest = json.loads(_member_bytes(tar, "manifest.json"))
     manifest["candidate_tree_sha256"] = "0" * 64
     forged = members.copy()
     forged["manifest.json"] = (
@@ -290,12 +300,10 @@ def test_forged_manifest_traversal_paths_refused(tmp_path: Path) -> None:
 
     with tarfile.open(fileobj=io.BytesIO(built.archive_bytes)) as tar:
         members = {
-            name: (
-                None if tar.getmember(name).issym() else tar.extractfile(name).read()
-            )
+            name: (None if tar.getmember(name).issym() else _member_bytes(tar, name))
             for name in tar.getnames()
         }
-        manifest = json.loads(tar.extractfile("manifest.json").read())
+        manifest = json.loads(_member_bytes(tar, "manifest.json"))
     evil = "escape/../../pwned.txt"
     manifest["candidate_entries"].append(
         {

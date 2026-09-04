@@ -33,10 +33,15 @@ FROZEN_SPLIT_HASHES = {
     "sealed": "9954b44ebc3bb95478abdf0a1f9f2f33ea9a842d6f2d6fdb9e3afc7920f4c864",
 }
 CORPUS_ENVELOPE_SCHEMA = "hermes-beads-routing-prompts.v1"
-REPORT_SCHEMA = "hermes-beads-actual-discovery-report.v1"
+REPORT_SCHEMA = "hermes-beads-actual-discovery-report.v2"
 SCENARIO_COUNT = 72
 MAX_TURNS = 2
 RUN_BUDGET_SECONDS = 180
+# Bounded raw-output retention for errored lanes (Defect 3). A cap per stream
+# stops a runaway process from filling the disk; a cap on how many errored
+# lanes retain output at all bounds total disk use across a full sweep.
+RAW_RETENTION_MAX_BYTES = 65_536
+RAW_RETENTION_LANE_LIMIT = 3
 _HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 _VOLATILE_PARTS = {"__pycache__", ".pytest_cache", ".DS_Store"}
 _CREDENTIAL_FILES = (".env", "auth.json")
@@ -66,11 +71,50 @@ class ScenarioResult:
     stdout_sha256: str
     stderr_sha256: str
     state_sha256: str
+    raw_stdout_path: str | None = None
+    raw_stderr_path: str | None = None
+
+    @property
+    def errored(self) -> bool:
+        """True when the session did not complete cleanly.
+
+        When this is true, routing is UNKNOWN, not wrong: the session may
+        have crashed before it ever reached skill routing (for example, a
+        rejected model call). Do not read an errored lane as a routing
+        failure.
+        """
+        return self.exit_code != 0
+
+    @property
+    def _observed_load(self) -> bool:
+        return self.discovery_events > 0 and self.load_events > 0
+
+    @property
+    def routed_correctly(self) -> bool:
+        """Whether the observed load matched the expected load.
+
+        Meaningful only when ``errored`` is false. On an errored lane the
+        observed counts are typically zero as a side effect of the crash,
+        not evidence the skill decided correctly, so this value must not be
+        used for pass/fail purposes while errored.
+        """
+        return self._observed_load == self.expected_load
+
+    @property
+    def outcome(self) -> str:
+        """One of 'errored', 'passed', 'failed' -- a strict three-way partition.
+
+        An errored session is never folded into 'failed': a systemic outage
+        (every lane erroring) must read as "N errored", not "N routing
+        failures".
+        """
+        if self.errored:
+            return "errored"
+        return "passed" if self.routed_correctly else "failed"
 
     @property
     def passed(self) -> bool:
-        observed = self.discovery_events > 0 and self.load_events > 0
-        return self.exit_code == 0 and observed == self.expected_load
+        return self.outcome == "passed"
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -399,6 +443,29 @@ def _load_event_count(home: Path) -> int:
     return value if isinstance(value, int) and value >= 0 else 0
 
 
+def _retain_stream(
+    retention_root: Path, scenario_id: str, stream: str, text: str
+) -> str:
+    """Persist a truncated copy of one errored lane's stream at mode 0600.
+
+    The text can carry provider messages and session identifiers, so it is
+    written to the 0700 runtime root and never echoed to stdout. Only the
+    path is reported. The retained file never exceeds
+    ``RAW_RETENTION_MAX_BYTES``, and the marker that records the clip is
+    counted inside that budget, so a reader can never mistake a truncated
+    stream for a complete one nor a capped file for an oversized one.
+    """
+    retention_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    raw = text.encode("utf-8", errors="replace")
+    if len(raw) > RAW_RETENTION_MAX_BYTES:
+        marker = f"\n[truncated: {len(raw)} bytes of raw output clipped]\n".encode()
+        keep = max(0, RAW_RETENTION_MAX_BYTES - len(marker))
+        raw = raw[:keep] + marker
+    path = retention_root / f"{scenario_id}.{stream}.txt"
+    _write_secure_bytes(path, raw)
+    return str(path)
+
+
 def _run_scenario(
     scenario: Scenario,
     *,
@@ -410,6 +477,7 @@ def _run_scenario(
     model: str,
     credentials: Path | None,
     default_home: Path,
+    retention_root: Path | None = None,
 ) -> ScenarioResult:
     home = lane / "hermes-home"
     installed = install_candidate(candidate, home, candidate_sha256)
@@ -448,6 +516,12 @@ def _run_scenario(
         timeout=RUN_BUDGET_SECONDS + 30,
     )
     state_db = home / "state.db"
+    # Retain only for errored lanes. A clean lane is already fully described by
+    # its hashes and event counts; an errored lane is the one case where the
+    # text itself is the evidence, and discarding it forces a fresh (and
+    # possibly billed) reproduction to diagnose. The paths are resolved before
+    # the result is built because ScenarioResult is frozen.
+    retain = retention_root is not None and completed.returncode != 0
     result = ScenarioResult(
         scenario_id=scenario.scenario_id,
         split=scenario.split,
@@ -458,6 +532,20 @@ def _run_scenario(
         stdout_sha256=sha256_bytes(completed.stdout.encode()),
         stderr_sha256=sha256_bytes(completed.stderr.encode()),
         state_sha256=sha256_file(state_db) if state_db.is_file() else sha256_bytes(b""),
+        raw_stdout_path=(
+            _retain_stream(
+                retention_root, scenario.scenario_id, "stdout", completed.stdout
+            )
+            if retain
+            else None
+        ),
+        raw_stderr_path=(
+            _retain_stream(
+                retention_root, scenario.scenario_id, "stderr", completed.stderr
+            )
+            if retain
+            else None
+        ),
     )
     if hash_tree(installed) != candidate_sha256:
         raise HarnessError("INSTALLED_CANDIDATE_MUTATED")
@@ -531,14 +619,25 @@ def build_report(
     model: str,
     default_profile_unchanged: bool,
     default_profile_write_denied: bool = True,
+    aborted_reason: str | None = None,
 ) -> dict[str, Any]:
     rows = []
     for result in results:
         row = asdict(result)
         row["passed"] = result.passed
+        row["errored"] = result.errored
+        row["outcome"] = result.outcome
         rows.append(row)
-    passed = sum(1 for row in rows if row["passed"])
-    return {
+    # Strict three-way partition. "failed" counts routing failures only:
+    # an errored lane never reached routing, so folding it into "failed"
+    # would report a provider outage as proof the skill does not route.
+    passed = sum(1 for row in rows if row["outcome"] == "passed")
+    failed = sum(1 for row in rows if row["outcome"] == "failed")
+    errored = sum(1 for row in rows if row["outcome"] == "errored")
+    retained = any(
+        row.get("raw_stdout_path") or row.get("raw_stderr_path") for row in rows
+    )
+    report = {
         "schema_version": REPORT_SCHEMA,
         "candidate_sha256": candidate_sha256,
         "corpus_sha256": corpus_sha256,
@@ -547,12 +646,18 @@ def build_report(
         "model": model,
         "scenario_count": len(rows),
         "passed": passed,
-        "failed": len(rows) - passed,
+        "failed": failed,
+        "errored": errored,
+        "scored_count": passed + failed,
         "default_profile_unchanged": default_profile_unchanged,
         "default_profile_write_denied": default_profile_write_denied,
-        "raw_content_retained": False,
+        "raw_content_retained": retained,
         "results": rows,
     }
+    if aborted_reason is not None:
+        report["aborted"] = True
+        report["aborted_reason"] = aborted_reason
+    return report
 
 
 def run_corpus(
@@ -567,6 +672,7 @@ def run_corpus(
     credentials: Path | None,
     provider: str,
     model: str,
+    force_full_sweep: bool = False,
 ) -> dict[str, Any]:
     if len(scenarios) != SCENARIO_COUNT:
         raise HarnessError("CORPUS_INDEX_MISMATCH")
@@ -583,27 +689,54 @@ def run_corpus(
     os.chmod(runtime_root, 0o700)
     verify_default_write_denial(runtime_root, default_home)
     before = _profile_fingerprint(default_home)
+    # Retention lives under the 0700 runtime root, not the lane: each lane is
+    # torn down immediately after its run, so anything written inside it is
+    # gone before the report is built.
+    retention_root = runtime_root / "retained"
     results: list[ScenarioResult] = []
+    retained_lanes = 0
+    aborted_reason: str | None = None
     try:
-        for scenario in scenarios:
+        for index, scenario in enumerate(scenarios):
             lane = runtime_root / scenario.scenario_id
             lane.mkdir(mode=0o700)
             try:
-                results.append(
-                    _run_scenario(
-                        scenario,
-                        lane=lane,
-                        candidate=candidate,
-                        candidate_sha256=candidate_sha256,
-                        hermes_source=hermes_source,
-                        provider=provider,
-                        model=model,
-                        credentials=credentials,
-                        default_home=default_home,
-                    )
+                result = _run_scenario(
+                    scenario,
+                    lane=lane,
+                    candidate=candidate,
+                    candidate_sha256=candidate_sha256,
+                    hermes_source=hermes_source,
+                    provider=provider,
+                    model=model,
+                    credentials=credentials,
+                    default_home=default_home,
+                    retention_root=(
+                        retention_root
+                        if retained_lanes < RAW_RETENTION_LANE_LIMIT
+                        else None
+                    ),
                 )
             finally:
                 shutil.rmtree(lane, ignore_errors=False)
+            results.append(result)
+            if result.raw_stdout_path or result.raw_stderr_path:
+                retained_lanes += 1
+            # Pre-flight: the first lane is a canary. If it errors, the cause
+            # is almost always systemic (an exhausted provider quota, a broken
+            # install), and running the remaining lanes only repeats the same
+            # failure at full cost. Abort fail-closed and say why. Routing
+            # failures never trigger this -- only errors, which mean the
+            # session never reached routing at all.
+            if index == 0 and result.errored and not force_full_sweep:
+                aborted_reason = (
+                    "PREFLIGHT_LANE_ERRORED: the first lane exited "
+                    f"{result.exit_code} without completing. This is treated as "
+                    "a systemic failure, so the remaining lanes were skipped. "
+                    "Inspect the retained raw output, then re-run with "
+                    "--force-full-sweep to override."
+                )
+                break
     finally:
         after = _profile_fingerprint(default_home)
     unchanged = before == after
@@ -615,6 +748,7 @@ def run_corpus(
         provider=provider,
         model=model,
         default_profile_unchanged=unchanged,
+        aborted_reason=aborted_reason,
     )
     return report
 
@@ -700,12 +834,33 @@ print(json.dumps({"candidate_discovered": "beads" in names, "candidate_loaded": 
         shutil.rmtree(runtime_root, ignore_errors=False)
 
 
+def _write_secure_bytes(path: Path, data: bytes) -> None:
+    """Write ``data`` to ``path`` atomically with mode exactly 0o600.
+
+    ``os.open``'s mode argument is masked by the process umask, so a hostile
+    or merely permissive umask (e.g. 0o000) can leave the file group/world
+    readable even when 0o600 is requested at open time. The explicit
+    ``os.chmod`` after the atomic rename is what actually pins the mode,
+    regardless of umask (Defect 4).
+    """
+    path = Path(path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    os.replace(tmp, path)
+    os.chmod(path, 0o600)
+
+
 def _write_json(path: Path | None, payload: Mapping[str, Any]) -> None:
     rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if path is None:
         sys.stdout.write(rendered)
     else:
-        Path(path).write_text(rendered, encoding="utf-8")
+        _write_secure_bytes(Path(path), rendered.encode("utf-8"))
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -741,6 +896,15 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--model", default="gpt-5.6-sol")
     run.add_argument("--authorization", required=True)
     run.add_argument("--output", type=Path, required=True)
+    run.add_argument(
+        "--force-full-sweep",
+        action="store_true",
+        help=(
+            "Run every lane even when the first lane errors. Off by default: "
+            "a systemic failure would otherwise repeat across all "
+            f"{SCENARIO_COUNT} lanes at full provider cost."
+        ),
+    )
     return parser
 
 
@@ -776,8 +940,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             credentials=args.credentials,
             provider=args.provider,
             model=args.model,
+            force_full_sweep=args.force_full_sweep,
         )
         _write_json(args.output, payload)
+        # Exit codes are a three-way partition, matching the report. An
+        # errored or aborted sweep must never exit 0: with the errored count
+        # split out of "failed", a total provider outage leaves failed == 0,
+        # and reporting that as success is exactly the confusion this change
+        # exists to remove. 4 means "no verdict"; 3 means "a real routing
+        # failure was measured".
+        if payload["errored"] or payload.get("aborted"):
+            return 4
         return 0 if payload["failed"] == 0 else 3
     except HarnessError as error:
         print(f"FAIL: {error}", file=sys.stderr)
