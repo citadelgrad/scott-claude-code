@@ -1,0 +1,54 @@
+scripts/tests/beads_integration/test_candidate_flow.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-406
+skills/beads/evals/README.md
+  s_a00c65db140d34::t_01d9ad398c0160 34
+skills/beads/scripts/validate_worker_packet.py
+  s_a00c65db140d34::t_01d9ad398c0160 47-73
+skills/beads/scripts/package_lane.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-551
+  s_a00c65db140d34::t_d2699649e7772f 552-554
+scripts/tests/beads_integration/test_freeze_lane.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-308
+skills/beads/references/worker-contract.md
+  s_a00c65db140d34::t_01d9ad398c0160 175-182
+skills/beads/scripts/lane_snapshot.py
+  s_a00c65db140d34::t_01d9ad398c0160 7-12,19,22,28,33-38,40,42-51,73-88,106,135-147,151-157,194-222,225
+  s_a00c65db140d34::t_1f699e48fe535a 226-227
+skills/beads/schemas/worker-packet-v1.schema.json
+  s_a00c65db140d34::t_01d9ad398c0160 437-441
+scripts/tests/beads_integration/_common.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-371
+  s_a00c65db140d34::t_7799067cc7d9c9 372-374
+skills/beads/scripts/coordinator_integration.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-1765
+skills/beads/scripts/validate_lane_freeze.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-209
+scripts/tests/beads_integration/test_package_lane.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-273
+  s_a00c65db140d34::t_6ab9bc6f96c025 274-276
+scripts/tests/beads_integration/test_validate_lane_freeze.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-300
+  s_a00c65db140d34::t_1a3d255eaf0d54 301-303
+skills/beads/scripts/validate_worker_execution_result.py
+  s_a00c65db140d34::t_01d9ad398c0160 416
+skills/beads/scripts/schema_runtime.py
+  s_a00c65db140d34::t_01d9ad398c0160 11-13
+scripts/tests/beads_worker_result/test_phase0_regressions.py
+  s_a00c65db140d34::t_01d9ad398c0160 1-293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a254b4270e0f760e427589c720700cd06ac89281",
+  "prompts": {},
+  "sessions": {
+    "s_a00c65db140d34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44259016-efee-4f82-857f-2ae96aa76d44",
+        "model": "unknown"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
