@@ -434,6 +434,11 @@
           "minLength": 1,
           "pattern": "^/(?!/)(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*(?:/)\\.{1,2}(?:/|$))[^\\x00]*$",
           "type": "string"
+        },
+        "max_untracked_file_bytes": {
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
         }
       },
       "required": [

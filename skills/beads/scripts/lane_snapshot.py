@@ -4,29 +4,51 @@
 Worker finalization and parent validation both recompute this snapshot from
 the filesystem; neither side ever accepts lane state from the other.  Any
 caller drift or post-finalization change therefore fails closed.
+
+Untracked symlinks are inventoried per ``lane-freeze-v1``: ``kind``
+``"symlink"``, ``size_bytes`` 0, and a SHA-256 of the link text itself (no
+target follow, so dangling links inventory identically).  Untracked-file
+budgets are packet-declared through ``verification.max_untracked_file_bytes``
+when present, defaulting to :data:`MAX_UNTRACKED_FILE_BYTES`.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 GIT_TIMEOUT_SECONDS = 60
 MAX_UNTRACKED_FILE_BYTES = 10_485_760
+MAX_U64 = (1 << 64) - 1
 SHA256_EMPTY = hashlib.sha256(b"").hexdigest()
 
 
 class LaneSnapshotError(ValueError):
-    """Typed fail-closed snapshot refusal."""
+    """Typed fail-closed snapshot refusal.
 
-    def __init__(self, code: str) -> None:
+    ``path`` names the offending repo-relative path when the refusal is
+    path-specific; the message is ``CODE:<path>:<reason>`` so operators can
+    see exactly which file blocked the snapshot.
+    """
+
+    def __init__(self, code: str, *, path: str | None = None, reason: str = "") -> None:
         self.code = code
-        super().__init__(code)
+        self.path = path
+        self.reason = reason
+        message = (
+            code
+            if path is None
+            else f"{code}:{path}:{reason}"
+            if reason
+            else f"{code}:{path}"
+        )
+        super().__init__(message)
 
 
 def _git(worktree: Path, *args: str) -> bytes:
@@ -48,6 +70,22 @@ def git_query(worktree: Path, *args: str) -> bytes:
     return _git(Path(worktree), *args)
 
 
+def budget_from_packet(packet_value: Any) -> int:
+    """Derive the untracked-file byte budget declared by a worker packet."""
+    if not isinstance(packet_value, dict):
+        raise LaneSnapshotError("LANE_SNAPSHOT_PACKET_INVALID")
+    declared = packet_value.get("verification", {}).get("max_untracked_file_bytes")
+    if declared is None:
+        return MAX_UNTRACKED_FILE_BYTES
+    if (
+        isinstance(declared, bool)
+        or not isinstance(declared, int)
+        or not 1 <= declared <= MAX_U64
+    ):
+        raise LaneSnapshotError("LANE_SNAPSHOT_PACKET_INVALID")
+    return declared
+
+
 def _split_z(raw: bytes) -> list[str]:
     return [item.decode("utf-8", "strict") for item in raw.split(b"\x00") if item]
 
@@ -65,6 +103,7 @@ class LaneSnapshot:
     untracked_inventory_sha256: str
     changed_paths: tuple[str, ...]
     dirty: bool
+    inventory: tuple[dict[str, Any], ...] = field(default=())
 
     @property
     def lane_state(self) -> dict[str, Any]:
@@ -93,10 +132,29 @@ def _is_excluded(path: Path, exclude: Path) -> bool:
     return True
 
 
-def capture(worktree: Path, base_sha: str, *, exclude: Path) -> LaneSnapshot:
+def _invalid(relative: str, reason: str) -> LaneSnapshotError:
+    return LaneSnapshotError(
+        "LANE_SNAPSHOT_UNTRACKED_INVALID", path=relative, reason=reason
+    )
+
+
+def capture(
+    worktree: Path,
+    base_sha: str,
+    *,
+    exclude: Path,
+    max_untracked_file_bytes: int | None = None,
+) -> LaneSnapshot:
     """Derive the canonical lane snapshot from the physical worktree."""
     worktree = Path(worktree)
     exclude = Path(exclude)
+    budget = (
+        MAX_UNTRACKED_FILE_BYTES
+        if max_untracked_file_bytes is None
+        else max_untracked_file_bytes
+    )
+    if isinstance(budget, bool) or not isinstance(budget, int) or budget < 1:
+        raise LaneSnapshotError("LANE_SNAPSHOT_PACKET_INVALID")
     head_raw = _git(worktree, "rev-parse", "HEAD")
     head = head_raw.decode("utf-8", "strict").strip()
     if not head:
@@ -133,23 +191,47 @@ def capture(worktree: Path, base_sha: str, *, exclude: Path) -> LaneSnapshot:
             continue
         try:
             metadata = path.stat(follow_symlinks=False)
-            if (
-                path.is_symlink()
-                or not stat.S_ISREG(metadata.st_mode)
-                or metadata.st_size > MAX_UNTRACKED_FILE_BYTES
-            ):
-                raise LaneSnapshotError("LANE_SNAPSHOT_UNTRACKED_INVALID")
+        except OSError as exc:
+            raise _invalid(relative, "stat_failed") from exc
+        mode = stat.S_IMODE(metadata.st_mode)
+        if path.is_symlink():
+            # Hash the link text itself; never follow (dangling links are
+            # inventoried identically to live ones).
+            try:
+                link_text = os.readlink(path)
+            except OSError as exc:
+                raise _invalid(relative, "readlink_failed") from exc
+            try:
+                encoded = link_text.encode("utf-8", "strict")
+            except UnicodeEncodeError as exc:
+                raise _invalid(relative, "link_not_utf8") from exc
+            inventory.append(
+                {
+                    "path": relative,
+                    "mode": mode,
+                    "size_bytes": 0,
+                    "sha256": hashlib.sha256(encoded).hexdigest(),
+                    "kind": "symlink",
+                }
+            )
+            continue
+        if not stat.S_ISREG(metadata.st_mode):
+            raise _invalid(relative, "not_regular_file")
+        if metadata.st_size > budget:
+            raise _invalid(relative, "over_budget")
+        try:
             data = path.read_bytes()
         except OSError as exc:
-            raise LaneSnapshotError("LANE_SNAPSHOT_UNTRACKED_INVALID") from exc
-        if len(data) != metadata.st_size:
-            raise LaneSnapshotError("LANE_SNAPSHOT_UNTRACKED_INVALID")
+            raise _invalid(relative, "read_failed") from exc
+        if len(data) != metadata.st_size or len(data) > budget:
+            raise _invalid(relative, "size_changed")
         inventory.append(
             {
                 "path": relative,
-                "mode": stat.S_IMODE(metadata.st_mode),
+                "mode": mode,
                 "size_bytes": metadata.st_size,
                 "sha256": hashlib.sha256(data).hexdigest(),
+                "kind": "file",
             }
         )
     changed = sorted(set(changed_tracked) | {item["path"] for item in inventory})
@@ -161,4 +243,5 @@ def capture(worktree: Path, base_sha: str, *, exclude: Path) -> LaneSnapshot:
         ).hexdigest(),
         changed_paths=tuple(changed),
         dirty=bool(changed),
+        inventory=tuple(inventory),
     )

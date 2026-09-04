@@ -44,16 +44,33 @@ _GIT_GLOBAL_PATH_OVERRIDES = ("-C", "--git-dir", "--work-tree")
 
 
 def _git_global_path_override(argv: Sequence[str]) -> bool:
-    """Reject every global Git directory/work-tree override: execution is
-    bound to the packet's verified worktree and its common Git directory."""
-    return any(
-        arg in _GIT_GLOBAL_PATH_OVERRIDES
-        or arg.startswith("--git-dir=")
-        or arg.startswith("--work-tree=")
-        or arg.startswith("-C")
-        and arg != "-C"
-        for arg in argv[1:]
-    )
+    """Reject global Git directory/work-tree overrides, position-aware.
+
+    Execution is bound to the packet's verified worktree (process cwd) and
+    its common Git directory.  ``-C``/``--git-dir``/``--work-tree`` (including
+    ``=`` and joined forms) are rejected **before the subcommand token**,
+    where they relocate execution.  ``--git-dir``/``--work-tree`` remain
+    rejected anywhere.  A bare ``-C <value>`` **after the ``commit``
+    subcommand** is allowed: it reuses an existing commit's message
+    (``git commit -C <commit>``) without relocating execution.  Joined
+    ``-C<value>`` forms are rejected everywhere.
+    """
+    tail = list(argv[1:])
+    subcommand = next((arg for arg in tail if not arg.startswith("-")), None)
+    subcommand_index = tail.index(subcommand) if subcommand is not None else len(tail)
+    for index, arg in enumerate(tail):
+        after_subcommand = index > subcommand_index
+        if arg == "--git-dir" or arg.startswith("--git-dir="):
+            return True
+        if arg == "--work-tree" or arg.startswith("--work-tree="):
+            return True
+        if arg == "-C":
+            # Message reuse is only valid after the commit subcommand.
+            if not (after_subcommand and subcommand == "commit"):
+                return True
+        elif arg.startswith("-C"):
+            return True
+    return False
 
 
 def _bound_common_git_dir(worktree: Path, repository: Path) -> None:

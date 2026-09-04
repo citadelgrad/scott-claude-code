@@ -413,6 +413,7 @@ def _validate_lane_snapshot(
             Path(packet.value["repository"]["worktree"]),
             packet.value["repository"]["base_sha"],
             exclude=Path(packet.value["verification"]["worker_outbox"]),
+            max_untracked_file_bytes=lane_snapshot.budget_from_packet(packet.value),
         )
     except lane_snapshot.LaneSnapshotError as exc:
         _fail(exc.code)

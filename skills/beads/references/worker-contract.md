@@ -172,9 +172,14 @@ One canonical command policy governs both packet admission and execution.
 `scope.local_commit` authority is applied at both seams, so a validated
 commit-mode packet's `git add`/`git commit` commands authorize and execute,
 while packets without that authority never do. Git global path overrides
-(`-C`, `--git-dir`, `--work-tree`) are always rejected: execution is bound to
-the packet-verified worktree (process cwd) and its common Git directory,
-which must resolve back to the repository root's `.git`. Any packet declaring
+are rejected position-aware: `-C`, `--git-dir`, and `--work-tree` (including
+`=` and joined forms) are rejected before the Git subcommand token, and
+`--git-dir`/`--work-tree` are rejected anywhere, because execution is bound
+to the packet-verified worktree (process cwd) and its common Git directory,
+which must resolve back to the repository root's `.git`. The single
+narrowed exception is a bare `-C <value>` after the `commit` subcommand:
+`git commit -C <commit>` reuses an existing commit's message without
+relocating execution and is therefore declarable and authorized. Any packet declaring
 a Git command must carry that verified worktree/common-dir binding at
 admission.
 
