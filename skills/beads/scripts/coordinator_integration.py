@@ -14,6 +14,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -502,15 +503,23 @@ def freeze_lane(
                     replayed=True,
                 )
         snapshot = _recapture(packet, validated)
-        if not snapshot.inventory:
+        mode = packet.value["scope"]["integration_mode"]
+        # Patch lanes must carry at least one candidate change (tracked or
+        # untracked); commit/export lanes legitimately freeze with an empty
+        # untracked inventory (their changes live in the frozen artifact).
+        if mode == "patch_package" and not snapshot.changed_paths:
             _update_one_issue(context, current, issue_id, _artifact_invalid)
             raise IntegrationError("LANE_FREEZE_EMPTY_INVENTORY")
-
-        mode = packet.value["scope"]["integration_mode"]
         state.ensure_owner_directory(lanes_directory, root=context.run_directory)
         if mode == "patch_package":
             freeze, artifact_bytes, artifact_path = _build_patch_freeze(
-                context, packet, validated, issue_id, epoch, lanes_directory
+                context,
+                packet,
+                validated,
+                issue_id,
+                epoch,
+                lanes_directory,
+                snapshot,
             )
         elif mode == "commit":
             freeze, artifact_bytes, artifact_path = _normalize_commit_freeze(
@@ -649,6 +658,7 @@ def _build_patch_freeze(
     issue_id: str,
     epoch: int,
     lanes_directory: Path,
+    snapshot: lane_snapshot.LaneSnapshot,
 ) -> tuple[dict[str, Any], bytes, Path]:
     artifact_path = lanes_directory / "lane-package.tar"
     try:
@@ -665,18 +675,30 @@ def _build_patch_freeze(
                 **_freeze_identity(packet, validated, issue_id, epoch),
                 "artifact_path": str(artifact_path),
             },
+            validated_snapshot=snapshot,
         )
     except package_lane.LanePackageError as exc:
         if exc.code in {"LANE_SCOPE_ESCAPE", "LANE_FILE_FORBIDDEN"}:
             raise IntegrationError("LANE_SCOPE_ESCAPE", status="conflict") from None
         if exc.code == "LANE_FREEZE_EMPTY_INVENTORY":
             raise IntegrationError("LANE_FREEZE_EMPTY_INVENTORY") from None
+        if exc.code == "LANE_VALIDATED_SNAPSHOT_DRIFT":
+            raise IntegrationError(
+                "LANE_FREEZE_LANE_DRIFT", status="conflict"
+            ) from None
         if exc.code == "LANE_REPRODUCTION_FAILED":
             raise IntegrationError(
                 "LANE_FREEZE_UNREPRODUCIBLE", status="conflict"
             ) from None
         raise IntegrationError("LANE_FREEZE_REFUSED") from None
-    return dict(built.lane_freeze), built.archive_bytes, artifact_path
+    # Defense in depth: the built freeze must still describe exactly the
+    # validated lane (no content drift survived into the record).
+    built_freeze = dict(built.lane_freeze)
+    if built_freeze["observed_head_sha"] != snapshot.head_sha or built_freeze[
+        "inventory"
+    ] != [dict(item) for item in snapshot.inventory]:
+        raise IntegrationError("LANE_FREEZE_LANE_DRIFT", status="conflict")
+    return built_freeze, built.archive_bytes, artifact_path
 
 
 def _normalize_commit_freeze(
@@ -708,7 +730,7 @@ def _normalize_commit_freeze(
         "observed_head_sha": validated.value["repository"]["head_sha"],
         "artifact_path": str(descriptor_path),
         "artifact_sha256": _sha256(_canonical(descriptor)),
-        "candidate_tree_sha256": frozen["tree_sha"],
+        "candidate_tree_sha256": _tree_state(frozen["tree_sha"]),
         "inventory": [dict(item) for item in snapshot.inventory],
         "packaging_tool_version": package_lane.PACKAGING_TOOL_VERSION,
         "reproduction_status": "verified_identity",
@@ -743,7 +765,7 @@ def _normalize_export_freeze(
         "observed_head_sha": validated.value["repository"]["head_sha"],
         "artifact_path": str(artifact_path),
         "artifact_sha256": _sha256(export_bytes),
-        "candidate_tree_sha256": frozen["tree_sha"],
+        "candidate_tree_sha256": _tree_state(frozen["tree_sha"]),
         "inventory": [dict(item) for item in snapshot.inventory],
         "packaging_tool_version": package_lane.PACKAGING_TOOL_VERSION,
         "reproduction_status": "verified_identity",
@@ -1182,7 +1204,11 @@ def build_candidate(
         )
         tree_dir = directory / "tree"
         if tree_dir.exists():
-            raise IntegrationError("CANDIDATE_TREE_EXISTS", status="conflict")
+            # A crash mid-build left a disposable candidate tree without a
+            # candidate record (records replay above).  The deterministic
+            # candidate path must be resumable: remove the leftover worktree
+            # and rebuild rather than wedging the lane set forever.
+            _remove_leftover_candidate_tree(repository, tree_dir)
         try:
             completed = subprocess.run(
                 [
@@ -1314,6 +1340,21 @@ def build_candidate(
         return result
 
 
+def _remove_leftover_candidate_tree(repository: Path, tree_dir: Path) -> None:
+    """Best-effort cleanup of a crashed candidate worktree; typed refusal
+    when the path cannot be reclaimed (never wedge silently)."""
+    subprocess.run(
+        ["git", "worktree", "remove", "--force", str(tree_dir)],
+        cwd=repository,
+        capture_output=True,
+        timeout=GIT_TIMEOUT,
+    )
+    if tree_dir.exists():
+        shutil.rmtree(tree_dir, ignore_errors=True)
+    if tree_dir.exists():
+        raise IntegrationError("CANDIDATE_TREE_STUCK", status="conflict")
+
+
 def _find_issue_by_freeze(
     current: state.CheckpointRef, freeze_sha: str
 ) -> dict[str, Any] | None:
@@ -1342,12 +1383,29 @@ def _update_all(
 
 
 def _apply_lanes(context: RunContext, tree_dir: Path, ordered: list[str]) -> list[str]:
+    freezes = [
+        (freeze_sha, _lane_freeze_record(context, freeze_sha)) for freeze_sha in ordered
+    ]
+    modes = {freeze["transfer_mode"] for _, freeze in freezes}
+    # Combined multi-mode candidates are honestly refused: patch and commit
+    # lanes need different application orders and cannot be overlapped
+    # safely in one tree.
+    if len(modes) > 1:
+        raise IntegrationError("CANDIDATE_MIXED_MODES", status="conflict")
+    if "external_export" in modes:
+        # Honest typed refusal: worker-built export tars are not
+        # package_lane packages and have no verified apply path here.
+        raise IntegrationError(
+            "CANDIDATE_EXTERNAL_EXPORT_UNSUPPORTED", status="conflict"
+        )
     # Ambiguous overlap between lanes stops without auto-resolution: the
     # same candidate path with different content in two lanes is a typed
-    # conflict before any candidate mutation.
+    # conflict before any candidate mutation.  Only patch packages carry
+    # a package_lane manifest; commit lanes apply via cherry-pick.
     seen: dict[str, tuple[str, str]] = {}
-    for freeze_sha in ordered:
-        freeze = _lane_freeze_record(context, freeze_sha)
+    for freeze_sha, freeze in freezes:
+        if freeze["transfer_mode"] != "patch_package":
+            continue
         archive = Path(freeze["artifact_path"])
         with open(archive, "rb") as stream:
             manifest = package_lane.verify_package(stream.read())
@@ -1396,12 +1454,26 @@ def _apply_patch_package(tree_dir: Path, archive: Path) -> None:
     import io as _io
     import tarfile
 
+    # Candidate-tree semantics: tracked-changed files (present in the
+    # candidate tree at predecessor state) are applied by the tracked diff
+    # ONLY; untracked files (including symlinks) are materialized from their
+    # content blobs ONLY.  Blob-write xor patch-apply per path: writing a
+    # tracked file's blob would desynchronize the patch context and make
+    # every tracked-modification lane conflict.
+    inventory_paths = {item["path"] for item in manifest["untracked_inventory"]}
+    tracked_changed = {
+        path for path in manifest["changed_paths"] if path not in inventory_paths
+    }
     with tarfile.open(fileobj=_io.BytesIO(raw)) as tar:
         diff_stream = tar.extractfile("tracked.diff")
         assert diff_stream is not None
         diff = diff_stream.read()
         for entry in manifest["candidate_entries"]:
             relative = entry["path"]
+            if relative in tracked_changed:
+                # The tracked diff (including deletions and mode changes)
+                # owns this path; never also write its blob.
+                continue
             target = tree_dir.joinpath(*relative.split("/"))
             if entry["kind"] == "deleted":
                 if target.exists():
@@ -1454,11 +1526,23 @@ def _run_candidate_tests(
     logs_directory = tree_dir / "candidate-logs"
     logs_directory.mkdir(mode=0o700, exist_ok=True)
     logs_directory.chmod(0o700)
+    current = context.checkpoints.current(rebuild_pointer=True)
     for issue_index, issue_id in enumerate(issue_ids):
+        entry = current.value["issues"].get(issue_id)
+        if entry is None:
+            raise IntegrationError("ISSUE_NOT_IN_RUN")
         imports_directory, imports = _load_imports(context, issue_id)
-        packet = validate_worker_packet.validate_packet(
-            imports["packet_bytes"], expected_packet_sha256=None
-        )
+        try:
+            packet = validate_worker_packet.validate_packet(
+                imports["packet_bytes"],
+                expected_packet_sha256=entry.get("packet_sha256"),
+            )
+        except ValueError as exc:
+            # Never trust run-dir packet bytes that no longer match the
+            # entry's pinned packet hash.
+            raise IntegrationError(
+                "CANDIDATE_PACKET_INVALID", status="conflict"
+            ) from exc
         for command_index, argv in enumerate(packet.required_commands):
             stdout_log = (
                 logs_directory
@@ -1724,6 +1808,15 @@ def _tree_state(tree: str) -> str:
 
 
 def _recover_apply(context: RunContext, expected_predecessor: str) -> tuple[str, Any]:
+    """Classify one dangling PRIMARY_INTEGRATION_PREPARED through typed probes.
+
+    APPLIED requires the primary HEAD to carry the intended tree AND the
+    worktree/index to be materialized (the same cleanliness the normal
+    path enforces).  A crash in the window between ``update-ref`` and
+    ``reset --hard`` leaves exactly the predecessor materialization behind:
+    recovery completes it only when every stale path is one of the
+    candidate's own committed changes, then verifies clean readback.
+    """
     prepared = _dangling_prepared(context, EFFECT_APPLY)
     if prepared is None:
         return ("none", None)
@@ -1732,24 +1825,71 @@ def _recover_apply(context: RunContext, expected_predecessor: str) -> tuple[str,
     head = _primary_head(context)
     tree = _git(repository, "rev-parse", "HEAD^{tree}").decode().strip()
     if _tree_state(tree) == intended_tree:
-        status = "APPLIED"
-    elif head == expected_predecessor:
-        status = "NOT_APPLIED"
-    else:
-        status = "CONFLICT"
-    if status == "APPLIED":
+        status_porcelain = _git(repository, "status", "--porcelain")
+        if status_porcelain.strip():
+            # HEAD moved but the worktree/index were never reset: only the
+            # candidate's own committed paths may be stale (PRIMARY_DIRTY
+            # semantics: unrelated dirt must never be silently reset).
+            committed = set(
+                path
+                for path in _git(
+                    repository,
+                    "diff",
+                    "--name-only",
+                    "-z",
+                    expected_predecessor,
+                    head,
+                )
+                .decode("utf-8", "strict")
+                .split("\x00")
+                if path
+            )
+            stale = set()
+            for line in status_porcelain.decode("utf-8", "strict").splitlines():
+                entry = line[3:] if len(line) > 3 else ""
+                for part in entry.split(" -> "):
+                    if part:
+                        stale.add(part)
+            if not stale <= committed:
+                context.journal.append(
+                    _resolution(
+                        prepared,
+                        status="CONFLICT",
+                        observed_sha=_sha256(_canonical({"head": head, "tree": tree})),
+                        evidence_path=None,
+                        evidence_sha=None,
+                    ),
+                    hook=context.crash_hook,
+                )
+                raise IntegrationError("PRIMARY_RECOVERY_CONFLICT", status="conflict")
+            completed = subprocess.run(
+                ["git", "reset", "--hard", head],
+                cwd=repository,
+                capture_output=True,
+                timeout=GIT_TIMEOUT,
+            )
+            if (
+                completed.returncode != 0
+                or _git(repository, "status", "--porcelain").strip()
+            ):
+                raise IntegrationError("PRIMARY_RECOVERY_CONFLICT", status="conflict")
+        # Real readback evidence: the applied candidate record itself.
+        evidence_path = Path(prepared["immutable_input_path"])
+        if not evidence_path.is_file():
+            raise IntegrationError("PRIMARY_RECOVERY_CONFLICT", status="conflict")
+        evidence_sha = _sha256(evidence_path.read_bytes())
         context.journal.append(
             _resolution(
                 prepared,
                 status="APPLIED",
                 observed_sha=_sha256(_canonical({"head": head, "tree": tree})),
-                evidence_path=None,
-                evidence_sha=None,
+                evidence_path=evidence_path,
+                evidence_sha=evidence_sha,
             ),
             hook=context.crash_hook,
         )
         return ("applied", _result("success", recovered=True))
-    if status == "CONFLICT":
+    if head != expected_predecessor:
         context.journal.append(
             _resolution(
                 prepared,

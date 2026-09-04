@@ -379,7 +379,9 @@ def test_candidate_tests_failure_leaves_primary_unchanged(tmp_path: Path) -> Non
     )
     m = fixture["m"]
     context = fixture["context"]
-    # Corrupt the imported packet's required command to one that fails.
+    # Corrupt the imported packet's required command: the bytes no longer
+    # match the entry's pinned packet hash, so candidate tests must refuse
+    # the run-dir bytes with a typed error instead of trusting them.
     imports = (
         fixture["run_directory"]
         / "imports"
@@ -391,11 +393,11 @@ def test_candidate_tests_failure_leaves_primary_unchanged(tmp_path: Path) -> Non
     imports.write_bytes(
         json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
     )
-    built = m.coordinator_integration.build_candidate(
-        context, lane_freeze_sha256s=list(fixture["freeze_shas"].values())
-    )
-    assert built["status"] == "refused"
-    assert built["error_code"] == "CANDIDATE_TESTS_FAILED"
+    with pytest.raises(m.coordinator_integration.IntegrationError) as invalid:
+        m.coordinator_integration.build_candidate(
+            context, lane_freeze_sha256s=list(fixture["freeze_shas"].values())
+        )
+    assert invalid.value.code == "CANDIDATE_PACKET_INVALID"
     head = (
         m.coordinator_integration._git(fixture["repo"], "rev-parse", "HEAD")
         .decode()

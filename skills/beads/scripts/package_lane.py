@@ -8,6 +8,12 @@ The package reproduces the candidate tree in any disposable directory; a
 freeze is only valid when the reproduction is exact.  This module never
 applies, commits, merges, stages, or pushes anything anywhere, and it
 performs no Beads/Hermes/remote calls.
+
+Honest limitation: the sensitive-content marker scan below covers
+untracked candidate content only.  Tracked-change content is carried in
+``tracked.diff`` (the lane's own Git diff, which the worker's required
+commands are expected to gate) and is *not* scanned for private-key
+markers here; no scan of tracked-change content is performed or implied.
 """
 
 from __future__ import annotations
@@ -110,12 +116,18 @@ def _candidate_entries(
     outbox: Path,
     scope: Mapping[str, Any],
     max_untracked_file_bytes: int,
+    validated_snapshot: "lane_snapshot.LaneSnapshot | None" = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str, str, list[str]]:
     """Collect normalized candidate + untracked-inventory entries.
 
     Returns (candidate_entries, untracked_inventory, tracked_diff_sha256,
     head_sha, changed_paths).  Raises typed refusals for scope escape,
     forbidden paths, oversized files, and sensitive content.
+
+    When ``validated_snapshot`` is supplied (the parent's independently
+    validated lane capture), the physical capture here must be exactly
+    equal to it; any drift between validation and packaging fails closed
+    so never-validated content cannot land in a frozen package.
     """
     allowed = list(scope.get("allowed_paths", ()))
     forbidden = list(scope.get("forbidden_paths", ()))
@@ -125,6 +137,8 @@ def _candidate_entries(
         exclude=outbox,
         max_untracked_file_bytes=max_untracked_file_bytes,
     )
+    if validated_snapshot is not None and snapshot != validated_snapshot:
+        raise LanePackageError("LANE_VALIDATED_SNAPSHOT_DRIFT")
     head = snapshot.head_sha
     diff_bytes = lane_snapshot.git_query(worktree, "diff", "--binary", base_sha)
     inventory_paths = {item["path"] for item in snapshot.inventory}
@@ -207,8 +221,16 @@ def build_lane_package(
     scope: Mapping[str, Any],
     packet_budgets: Mapping[str, Any],
     identity: Mapping[str, Any],
+    validated_snapshot: "lane_snapshot.LaneSnapshot | None" = None,
 ) -> LanePackage:
-    """Freeze the lane into a deterministic self-contained package."""
+    """Freeze the lane into a deterministic self-contained package.
+
+    ``validated_snapshot`` binds the package to the parent's independently
+    validated lane capture: packaging re-captures and requires exact
+    equality, so content that drifted after validation is refused instead
+    of frozen.  ``identity`` is embedded in the manifest so a package can
+    never be re-bound to a different lane's freeze record.
+    """
     worktree = Path(worktree)
     outbox = Path(outbox)
     budget = _budget(packet_budgets)
@@ -225,6 +247,7 @@ def build_lane_package(
             outbox=outbox,
             scope=scope,
             max_untracked_file_bytes=budget,
+            validated_snapshot=validated_snapshot,
         )
     except lane_snapshot.LaneSnapshotError as exc:
         if exc.reason == "over_budget":
@@ -260,6 +283,9 @@ def build_lane_package(
     manifest = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "packaging_tool_version": PACKAGING_TOOL_VERSION,
+        # Lane-identity binding: a package can never be re-bound to a
+        # different lane's freeze record (cross-lane artifact swap).
+        "identity": dict(identity),
         "base_sha": base_sha,
         "head_sha": head,
         "tracked_diff_sha256": tracked_diff_sha256,

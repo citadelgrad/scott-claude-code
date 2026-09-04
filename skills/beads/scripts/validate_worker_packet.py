@@ -9,7 +9,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -162,6 +162,14 @@ def _portable_relative(value: str) -> bool:
     return all(part not in ("", ".", "..") for part in parts)
 
 
+def _scope_covers(relative: str, pattern: str) -> bool:
+    """True when an allowed_paths pattern covers a worktree-relative path."""
+    if pattern.endswith("/**"):
+        root = pattern[:-3].rstrip("/")
+        return relative == root or relative.startswith(root + "/")
+    return relative == pattern or PurePosixPath(relative).match(pattern)
+
+
 def _protected_write_scope(value: str) -> bool:
     first = value.split("/", 1)[0]
     return (
@@ -291,6 +299,16 @@ def validate_packet(
             _fail("SCOPE_PATH_INVALID")
     if any(_protected_write_scope(item) for item in value["scope"]["allowed_paths"]):
         _fail("SCOPE_PROTECTED")
+    # A worker outbox inside allowed_paths would silently exclude its
+    # deliverables from every downstream inventory/freeze/review scan.
+    try:
+        outbox_relative = outbox.relative_to(worktree).as_posix()
+    except ValueError:  # pragma: no cover - containment checked above
+        _fail("PATH_CONTAINMENT_INVALID")
+    if any(
+        _scope_covers(outbox_relative, item) for item in value["scope"]["allowed_paths"]
+    ):
+        _fail("OUTBOX_INSIDE_SCOPE")
     commands = tuple(tuple(item) for item in value["verification"]["required_commands"])
     for command in commands:
         if _command_forbidden(

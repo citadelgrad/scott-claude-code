@@ -122,6 +122,20 @@ def validate_lane_freeze(
             manifest = package_lane.verify_package(artifact_bytes)
         except package_lane.LanePackageError:
             _fail("LANE_FREEZE_ARTIFACT_INVALID")
+        # Package identity binds to lane identity: a verbatim package from
+        # another (co-frozen, same-head) lane must never validate here.
+        manifest_identity = manifest.get("identity")
+        if not isinstance(manifest_identity, dict) or any(
+            manifest_identity.get(key) != value[key]
+            for key in (
+                "run_id",
+                "issue_id",
+                "attempt_id",
+                "ownership_epoch",
+                "worker_result_sha256",
+            )
+        ):
+            _fail("LANE_FREEZE_IDENTITY_MISMATCH")
         if manifest["candidate_tree_sha256"] != value["candidate_tree_sha256"]:
             _fail("LANE_FREEZE_ARTIFACT_INVALID")
         if manifest["head_sha"] != value["observed_head_sha"]:
