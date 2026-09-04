@@ -1,0 +1,60 @@
+scripts/tests/beads_contract/test_schema_differential.py
+  h_12ee2b2686c122 366
+scripts/tests/beads_contract/test_worker_packet.py
+  h_12ee2b2686c122 7,10,16-56,261-348
+scripts/tests/beads_worker_result/test_cli.py
+  h_12ee2b2686c122 37,39
+scripts/tests/beads_worker_result/test_finalize.py
+  h_12ee2b2686c122 16,36-37,39,42,54,74-79,81-90,107,109-112,279-292,295,297-298,301,303-313,315-325,328-330,339,353-354,364-365,367-369,381-555,567,570,573-609,614-625
+scripts/tests/beads_worker_result/test_result_contract.py
+  h_12ee2b2686c122 25,27,86-139
+scripts/tests/beads_worker_result/test_run_command.py
+  h_12ee2b2686c122 5,292-335
+scripts/tests/fixtures/beads_contract/invalid/run-checkpoint-v1.json
+  h_12ee2b2686c122 23-24
+scripts/tests/fixtures/beads_contract/invalid/run-manifest-v1.json
+  h_12ee2b2686c122 23-24
+scripts/tests/fixtures/beads_contract/valid/run-checkpoint-v1.json
+  h_12ee2b2686c122 22-23
+scripts/tests/fixtures/beads_contract/valid/run-manifest-v1.json
+  h_12ee2b2686c122 22-23
+scripts/tests/test_beads_coordinator_state.py
+  h_12ee2b2686c122 100,183,363,533,584-628,652
+scripts/tests/test_beads_ownership.py
+  h_12ee2b2686c122 48
+scripts/tests/test_beads_reconcile_run.py
+  h_12ee2b2686c122 32,47,89-194,205,549
+skills/beads/references/worker-contract.md
+  h_12ee2b2686c122 171-180,226-245
+skills/beads/schemas/run-checkpoint-v1.schema.json
+  h_12ee2b2686c122 591-594,600-603,606,608-614
+skills/beads/schemas/run-manifest-v1.schema.json
+  h_12ee2b2686c122 98-101,105-107,109,111,113-116
+skills/beads/scripts/beads_coordinator.py
+  h_12ee2b2686c122 50
+skills/beads/scripts/coordinator_state.py
+  h_12ee2b2686c122 80-84,909-910,944,1135,1212
+skills/beads/scripts/external_export.py
+  h_12ee2b2686c122 1-184
+skills/beads/scripts/lane_snapshot.py
+  h_12ee2b2686c122 1-164
+skills/beads/scripts/reconcile_run.py
+  h_12ee2b2686c122 69-83,132,134,139,526,528,533
+skills/beads/scripts/schema_runtime.py
+  h_12ee2b2686c122 11-13
+skills/beads/scripts/validate_worker_execution_result.py
+  h_12ee2b2686c122 12,19-20,287-289,298-302,311,329,341-426,493,503,505
+skills/beads/scripts/validate_worker_packet.py
+  h_12ee2b2686c122 43-96,157-158,167-182,201-202,287-288,295-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "e0f209b52ca1ead1bebfe5fd1a514884a2bb5156",
+  "prompts": {},
+  "humans": {
+    "h_12ee2b2686c122": {
+      "author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
