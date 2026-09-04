@@ -26,6 +26,11 @@ agents/CLAUDE.md
 # epic-planner scratch state (checkpoints, stage approvals, per-feature-slug)
 .claude/epic-planner/
 
+# transient per-agent git worktrees; each is a full checkout of this repo, so
+# leaving it tracked-adjacent makes `git status` noisy and makes `ruff`/`pytest`
+# from the repo root walk every agent's copy in addition to the real tree
+.claude/worktrees/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
