@@ -228,6 +228,29 @@ def test_forged_freeze_refusals_are_typed(tmp_path: Path, monkeypatch) -> None:
         lambda f, _: _canonical({**f, "issue_id": "scc-other"}),
         "LANE_FREEZE_IDENTITY_MISMATCH",
     )
+    # AC-T10-002 names a stale attempt and a stale epoch separately from a
+    # wrong issue. All three are enforced by the same identity comparison, but
+    # a refactor that dropped any one key from that tuple would still pass
+    # every other case here, so each gets its own forgery. Each substitute
+    # value is schema-valid on purpose -- an out-of-pattern id would be
+    # refused by the schema check first and prove nothing about identity.
+    check(
+        lambda f, _: _canonical({**f, "attempt_id": "attempt-999"}),
+        "LANE_FREEZE_IDENTITY_MISMATCH",
+    )
+    check(
+        lambda f, _: _canonical({**f, "ownership_epoch": EPOCH + 1}),
+        "LANE_FREEZE_IDENTITY_MISMATCH",
+    )
+    check(
+        lambda f, _: _canonical(
+            {
+                **f,
+                "run_id": "run-0000000000000000-20260101T000000.000000Z-AAAAAAAA",
+            }
+        ),
+        "LANE_FREEZE_IDENTITY_MISMATCH",
+    )
     check(
         lambda f, _: _canonical({**f, "transfer_mode": "commit"}),
         "LANE_FREEZE_MODE_MISMATCH",

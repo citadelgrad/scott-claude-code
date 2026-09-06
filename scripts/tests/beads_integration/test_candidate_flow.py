@@ -12,8 +12,14 @@ from . import _common as common
 RUN_ID = "run-0123456789abcdef-20260904T010000.000000Z-AAAAAAAC"
 
 
-def _setup(tmp_path: Path, lanes: list[dict]):
-    """lanes: [{issue_id, file, content, allowed}] -> frozen+verified fixture."""
+def _setup(tmp_path: Path, lanes: list[dict], *, freeze_lanes: bool = True):
+    """lanes: [{issue_id, file, content, allowed}] -> frozen+verified fixture.
+
+    ``freeze_lanes=False`` stops after the attempt import, leaving each lane's
+    artifact state un-``packaged``. That is the only way to reach the guard
+    AC-T10-001 is about: mutable worker state that never acquired an immutable
+    transfer identity.
+    """
     m = common.modules()
     factory = common.factory()
     repo, lane_worktree, head = _clean_repo(factory, tmp_path)
@@ -59,7 +65,7 @@ def _setup(tmp_path: Path, lanes: list[dict]):
     run["finish"]({issue_id: item["entry"] for issue_id, item in results.items()})
     context = m.coordinator_integration.open_run(run["run_directory"])
     freeze_shas = {}
-    for issue_id, item in results.items():
+    for issue_id, item in results.items() if freeze_lanes else ():
         frozen = m.coordinator_integration.freeze_lane(
             context, issue_id, expected_result_sha256=item["result_sha"]
         )
@@ -195,6 +201,112 @@ def test_apply_refuses_wrong_predecessor_and_dirty_primary(tmp_path: Path) -> No
         )
     assert dirty.value.code == "PRIMARY_DIRTY"
     (fixture["repo"] / "uncommitted.txt").unlink()
+
+
+def test_unpackaged_lane_is_never_verified_or_integrated(tmp_path: Path) -> None:
+    """AC-T10-001: mutable worker state with no immutable transfer identity.
+
+    Every other test in this file freezes its lanes first, so the guard that
+    stops an un-packaged lane is never reached. Here the attempt is imported
+    and the run is finished, but ``freeze_lane`` is never called -- exactly
+    the state a coordinator is in when a worker has produced changes that
+    nothing has yet bound to a hash. Verification must refuse it, and the
+    candidate build must have nothing to work from.
+    """
+    fixture = _setup(
+        tmp_path,
+        [{"issue_id": "scc-a", "file": "src/alpha.py", "content": "a = 1\n"}],
+        freeze_lanes=False,
+    )
+    m = fixture["m"]
+    context = fixture["context"]
+    assert fixture["freeze_shas"] == {}
+
+    with pytest.raises(m.coordinator_integration.IntegrationError) as unpackaged:
+        m.coordinator_integration.verify_lane(context, "scc-a")
+    assert unpackaged.value.code == "LANE_NOT_PACKAGED"
+    assert unpackaged.value.status == "conflict"
+
+    # No freeze exists, so there is no candidate to build either.
+    with pytest.raises(m.coordinator_integration.IntegrationError) as empty:
+        m.coordinator_integration.build_candidate(context, lane_freeze_sha256s=[])
+    assert empty.value.code == "CANDIDATE_LANES_EMPTY"
+
+    # The primary checkout never saw the worker's file.
+    assert not (fixture["repo"] / "src" / "alpha.py").exists()
+
+
+def test_apply_readback_mismatch_is_unknown_never_success(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """AC-T10-004: a readback mismatch resolves unknown, never success.
+
+    ``PRIMARY_READBACK_UNKNOWN`` is the one apply-phase outcome no test
+    reaches: the predecessor and dirty-primary guards fire *before* the
+    mutation, and the crash tests interrupt it, but none of them let the
+    mutation run and then observe a primary that does not match the candidate.
+    Suppress just the ``git reset --hard`` in the primary repository, so the
+    ref moves but the worktree does not follow. That is the real shape of a
+    half-applied primary.
+    """
+    fixture = _setup(
+        tmp_path,
+        [{"issue_id": "scc-a", "file": "src/alpha.py", "content": "a = 1\n"}],
+    )
+    m = fixture["m"]
+    context = fixture["context"]
+    ci = m.coordinator_integration
+    built = ci.build_candidate(
+        context, lane_freeze_sha256s=list(fixture["freeze_shas"].values())
+    )
+    assert built["status"] == "success"
+
+    import subprocess
+
+    real_run = subprocess.run
+    repository = fixture["repo"].resolve()
+
+    def suppress_primary_reset(argv, *args, **kwargs):
+        if (
+            list(argv[:3]) == ["git", "reset", "--hard"]
+            and Path(str(kwargs.get("cwd", ""))).resolve() == repository
+        ):
+            return subprocess.CompletedProcess(list(argv), 0, b"", b"")
+        return real_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(ci.subprocess, "run", suppress_primary_reset)
+    with pytest.raises(ci.IntegrationError) as unknown:
+        ci.apply_candidate(
+            context,
+            built["candidate_id"],
+            expected_predecessor=fixture["head"],
+        )
+    monkeypatch.undo()
+
+    assert unknown.value.code == "PRIMARY_READBACK_UNKNOWN"
+    assert unknown.value.status == "unknown"
+    # The refusal is journaled as UNKNOWN, and never as APPLIED. Scope this to
+    # the primary-integration effect: the same journal legitimately carries
+    # APPLIED resolutions for the checkpoint and freeze effects that ran to
+    # success earlier in the fixture, so a whole-file substring check would
+    # assert the wrong thing.
+    resolutions = [
+        json.loads(line)
+        for line in context.journal.path.read_text().splitlines()
+        if line.strip()
+    ]
+    apply_states = [
+        entry["status"]
+        for entry in resolutions
+        if entry.get("effect_type") == ci.EFFECT_APPLY
+        and entry.get("phase") == "RESOLUTION"
+    ]
+    assert apply_states == ["UNKNOWN"]
+    # No issue is marked integrated on an unknown outcome.
+    current = context.checkpoints.current(rebuild_pointer=True)
+    assert (
+        current.value["issues"]["scc-a"]["integration"]["state"] != "primary_integrated"
+    )
 
 
 def test_apply_crash_before_and_after_recovery(tmp_path: Path) -> None:
@@ -404,3 +516,150 @@ def test_candidate_tests_failure_leaves_primary_unchanged(tmp_path: Path) -> Non
     assert head == fixture["head"]
     current = context.checkpoints.current(rebuild_pointer=True)
     assert current.value["issues"]["scc-a"]["integration"]["state"] == "failed"
+
+
+def test_candidate_test_command_failure_is_refused_and_recoverable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """AC-T10-003: a required command that actually runs and exits nonzero.
+
+    Distinct from ``test_candidate_tests_failure_leaves_primary_unchanged``,
+    which corrupts the pinned packet hash and never lets a command run at
+    all. Here the packet stays valid throughout, so ``build_candidate``
+    reaches the genuine ``tests_passed=False`` *return* path (``status=
+    "refused"``) rather than raising -- callers must inspect the result, not
+    catch an exception.
+
+    The worker's own attempt and the lane freeze/verify both re-run the same
+    pinned required command (``_common.import_attempt`` and ``verify_lane``'s
+    ``_rerun_commands``), so it must genuinely succeed there or the fixture
+    could never freeze at all. Only ``build_candidate``'s own re-run, in
+    ``_run_candidate_tests``, is made to fail -- by swapping in a really
+    failing argv (``/usr/bin/false``) for just that one call, the same
+    surgical-substitution technique ``test_apply_readback_mismatch_is_unknown_never_success``
+    uses on ``subprocess.run`` for AC-T10-004. This is a low-level dependency
+    swap, not a mock of the refusal logic under test.
+    """
+    fixture = _setup(
+        tmp_path,
+        [{"issue_id": "scc-a", "file": "src/alpha.py", "content": "a = 1\n"}],
+    )
+    m = fixture["m"]
+    context = fixture["context"]
+    ci = m.coordinator_integration
+
+    import dataclasses
+
+    real_run_command = ci.safe_output.run_command
+
+    def fail_required_command(spec, *args, **kwargs):
+        if spec.profile == "verification" and spec.argv == ("/usr/bin/printf", "ok"):
+            spec = dataclasses.replace(spec, argv=("/usr/bin/false",))
+        return real_run_command(spec, *args, **kwargs)
+
+    monkeypatch.setattr(ci.safe_output, "run_command", fail_required_command)
+    built = ci.build_candidate(
+        context, lane_freeze_sha256s=list(fixture["freeze_shas"].values())
+    )
+    monkeypatch.undo()
+    assert built["status"] == "refused"
+    assert built["error_code"] == "CANDIDATE_TESTS_FAILED"
+    assert built["tests_passed"] is False
+
+    # Primary untouched: build_candidate only ever wrote to a disposable
+    # worktree under the run directory.
+    head = ci._git(fixture["repo"], "rev-parse", "HEAD").decode().strip()
+    assert head == fixture["head"]
+    assert not (fixture["repo"] / "src" / "alpha.py").exists()
+
+    # The candidate record and the lane freeze artifact survive the failure,
+    # recoverable for inspection or retry.
+    record_path = ci._candidate_directory(context, built["candidate_id"]) / (
+        "candidate.json"
+    )
+    assert record_path.is_file()
+    lanes = fixture["run_directory"] / "lanes"
+    assert len(list(lanes.iterdir())) == 1
+    current = context.checkpoints.current(rebuild_pointer=True)
+    assert current.value["issues"]["scc-a"]["integration"]["state"] == "failed"
+
+    # A failing-tests record can never be applied.
+    with pytest.raises(ci.IntegrationError) as refused:
+        ci.apply_candidate(
+            context,
+            built["candidate_id"],
+            expected_predecessor=fixture["head"],
+        )
+    assert refused.value.code == "CANDIDATE_TESTS_FAILED"
+    head_after = ci._git(fixture["repo"], "rev-parse", "HEAD").decode().strip()
+    assert head_after == fixture["head"]
+
+
+def test_combined_review_rejects_self_review_and_failing_verdict(
+    tmp_path: Path,
+) -> None:
+    """AC-T10-005: the combined-candidate review is independent of lane self-report.
+
+    Two lanes force ``review_required``. A lane implementer submitting the
+    *combined*-candidate review is refused by ``record_combined_review`` with
+    its own error code (``CANDIDATE_REVIEW_INVALID``) -- not the
+    ``REVIEW_NOT_INDEPENDENT`` code ``test_freeze_lane.py`` proves for
+    per-lane self-report -- showing the combined-candidate gate is a
+    distinct, independently-enforced check rather than inherited from lane
+    review. A genuinely independent reviewer who fails the candidate has
+    that verdict stored, but the candidate is refused both immediately
+    (``record_combined_review``'s own return) and again at apply time
+    (``apply_candidate``'s ``_validate_combined_review`` re-check), and the
+    primary checkout is never touched.
+    """
+    fixture = _setup(
+        tmp_path,
+        [
+            {"issue_id": "scc-a", "file": "src/alpha.py", "content": "a = 1\n"},
+            {"issue_id": "scc-b", "file": "src/beta.py", "content": "b = 2\n"},
+        ],
+    )
+    m = fixture["m"]
+    context = fixture["context"]
+    ci = m.coordinator_integration
+    shas = list(fixture["freeze_shas"].values())
+    built = ci.build_candidate(context, lane_freeze_sha256s=shas)
+    assert built["status"] == "partial"
+
+    self_review = common.reviewer_record(
+        run_id=RUN_ID,
+        target_kind="combined_candidate",
+        target_sha256=built["candidate_record_sha256"],
+        reviewer_id="implementer-a",
+        implementer_ids=["implementer-a", "implementer-b"],
+    )
+    self_path = common.write_review(m, fixture["run_directory"], self_review)
+    with pytest.raises(ci.IntegrationError) as dependent:
+        ci.record_combined_review(context, self_path)
+    assert dependent.value.code == "CANDIDATE_REVIEW_INVALID"
+
+    failing_review = common.reviewer_record(
+        run_id=RUN_ID,
+        target_kind="combined_candidate",
+        target_sha256=built["candidate_record_sha256"],
+        reviewer_id="combined-reviewer",
+        implementer_ids=["implementer-a", "implementer-b"],
+        verdict="fail",
+    )
+    failing_path = common.write_review(m, fixture["run_directory"], failing_review)
+    outcome = ci.record_combined_review(context, failing_path)
+    assert outcome["status"] == "refused"
+    assert outcome["error_code"] == "CANDIDATE_REVIEW_FAILED"
+
+    with pytest.raises(ci.IntegrationError) as refused:
+        ci.apply_candidate(
+            context,
+            built["candidate_id"],
+            expected_predecessor=fixture["head"],
+        )
+    assert refused.value.code == "CANDIDATE_REVIEW_FAILED"
+
+    head = ci._git(fixture["repo"], "rev-parse", "HEAD").decode().strip()
+    assert head == fixture["head"]
+    assert not (fixture["repo"] / "src" / "alpha.py").exists()
+    assert not (fixture["repo"] / "src" / "beta.py").exists()
