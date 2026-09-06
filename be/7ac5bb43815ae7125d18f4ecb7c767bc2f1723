@@ -1,0 +1,22 @@
+skills/beads/SKILL.md
+  s_d993bc32d7bba5::t_fb2a0ac2bd4156 38
+  s_d993bc32d7bba5::t_a181b613995264 31-32
+  s_d993bc32d7bba5::t_07df59efcf5d8c 34-36
+  s_d993bc32d7bba5::t_0bc89ec736c1cf 4-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "be7ac5bb43815ae7125d18f4ecb7c767bc2f1723",
+  "prompts": {},
+  "sessions": {
+    "s_d993bc32d7bba5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d7fbb5b-65de-42d1-a015-e96145a597df",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
