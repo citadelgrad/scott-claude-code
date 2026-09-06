@@ -1,0 +1,23 @@
+scripts/tests/beads_contract/test_secret_redaction_ordering.py
+  s_a00c65db140d34::t_787c3e109c7578 49
+  s_a00c65db140d34::t_337b1a16a3a897 95-98
+  s_a00c65db140d34::t_f703afcdc83607 1-48,50-94,99-101
+skills/beads/scripts/safe_output.py
+  s_a00c65db140d34::t_a2f079edf6fe01 145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "83ea9fa6de81475738a3a2839ba47b81e37f37bf",
+  "prompts": {},
+  "sessions": {
+    "s_a00c65db140d34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44259016-efee-4f82-857f-2ae96aa76d44",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
