@@ -1,0 +1,49 @@
+scripts/tests/fixtures/beads_dag/static/04_cycle.json
+  s_a00c65db140d34::t_015c609c52ec32 1-15
+scripts/tests/fixtures/beads_dag/static/09_inconsistent_snapshot.json
+  s_a00c65db140d34::t_e635a693a9842c 1-18
+scripts/tests/fixtures/beads_dag/static/07_human_decision_blocker.json
+  s_a00c65db140d34::t_db0fee587644e0 1-18
+scripts/tests/fixtures/beads_dag/static/03_multi_root.json
+  s_a00c65db140d34::t_b20c1df6a52fcf 1-17
+scripts/tests/fixtures/beads_dag/static/12_same_batch_blocker.json
+  s_a00c65db140d34::t_24583d3c0328c8 1-15
+scripts/tests/fixtures/beads_dag/static/05_inversion.json
+  s_a00c65db140d34::t_7e57c5d2aee6a0 1-16
+scripts/tests/beads_dag/_common.py
+  s_a00c65db140d34::t_77cb5abcb7b40d 1-86
+scripts/tests/fixtures/beads_dag/static/02_diamond.json
+  s_a00c65db140d34::t_ff3f1e8597c2e4 1-18
+scripts/tests/fixtures/beads_dag/static/01_linear_chain.json
+  s_a00c65db140d34::t_62871b7c9b8958 1-18
+scripts/tests/fixtures/beads_dag/static/10_capacity_and_stable_ordering.json
+  s_a00c65db140d34::t_5e099c988290b6 1-17
+scripts/tests/beads_dag/test_dag_conformance.py
+  s_a00c65db140d34::t_ea61b137ef74c2 1-168
+scripts/tests/beads_dag/__init__.py
+  s_a00c65db140d34::t_153d36bb742c9f 1-9
+scripts/tests/fixtures/beads_dag/static/08_oversized_scope.json
+  s_a00c65db140d34::t_522dcfd8feb698 1-15
+scripts/tests/fixtures/beads_dag/dynamic/01_close_blocker_reprioritize_failure.json
+  s_a00c65db140d34::t_e5bdd69f67cf1e 1-84
+scripts/tests/fixtures/beads_dag/static/06_deferred_blocker.json
+  s_a00c65db140d34::t_b1d482ae36eb83 1-17
+scripts/tests/fixtures/beads_dag/static/11_overlap_and_unknown_never_concurrent.json
+  s_a00c65db140d34::t_3f53557e215576 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "ae7788495f2c2b0e030c5015b5fd15316be407d9",
+  "prompts": {},
+  "sessions": {
+    "s_a00c65db140d34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44259016-efee-4f82-857f-2ae96aa76d44",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
