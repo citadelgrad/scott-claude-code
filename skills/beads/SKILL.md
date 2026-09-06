@@ -1,11 +1,14 @@
 ---
 name: beads
 description: >-
-  Use when bd/Beads is explicitly requested, or trusted repository context designates
-  Beads as the issue tracker for nontrivial tracked work: creating, claiming,
-  implementing, or closing a tracked issue, its dependencies, concurrent or recovering
-  work, review gates before close, or durable handoff. Do not use for unrelated
-  repositories, ephemeral work, or PAS authoring with no real Beads lifecycle.
+  Use when bd/Beads is explicitly requested, or trusted repository context designates Beads as the
+  issue tracker, for nontrivial tracked work: creating, claiming, implementing, or closing an issue;
+  an ambiguous or missing workspace; dependency graphs and ready-front scheduling; concurrent or swarm
+  workers, isolated lanes, and claim conflicts; verifying a worker's result before integration or
+  closure; crash, compaction, or interrupted-session recovery; human or CI approval gates; redacting
+  secrets in issue content; choosing Beads versus a durable executor (PAS); and durable cross-session
+  handoff. Do not use for unrelated repositories, ephemeral work, or PAS authoring with no real Beads
+  lifecycle.
 license: MIT; see LICENSE.txt and references/sources.md
 compatibility: >-
   Hermes-first. Requires the Go/Dolt bd executable for lifecycle work and Git
@@ -25,19 +28,14 @@ Beads and live `bd` behavior remain authoritative; this skill supplies routing,
 safety boundaries, evidence discipline, and Hermes-first coordination policy.
 ## Product boundary
 
-Use this skill for explicit `bd`/Beads requests and for nontrivial tracked work
-when trusted repository instructions designate Beads as the issue tracker.
-Relevant work includes issue creation, claim, implementation, dependencies,
-ready fronts, closure, recovery, durable handoff, and issue-level delegation.
+Use this skill for explicit `bd`/Beads requests and for nontrivial tracked work when trusted repository instructions designate Beads as the issue tracker.
+Relevant work includes issue creation, claim, implementation, dependencies, ready fronts, closure, recovery, durable handoff, and issue-level delegation.
 
-Do not load it merely because a task could be tracked. Stay quiet for unrelated
-repositories, arithmetic, rewriting, non-Beads current-state inspection,
-read-only code explanation, generic brainstorming, Paperclip-only work, and PAS
-authoring with no Beads lifecycle. A complete ephemeral task may remain untracked when trusted
-repository policy permits that route.
+Do not load it merely because a task could be tracked. Stay quiet for unrelated repositories, arithmetic, rewriting, non-Beads
+current-state inspection, read-only code explanation, generic brainstorming, Paperclip-only work, and PAS authoring with no Beads
+lifecycle. A complete ephemeral task may remain untracked when trusted repository policy permits that route.
 
-This package targets Go/Dolt Beads from `gastownhall/beads`, executable `bd`.
-It is not guidance for `br`/beads_rust and never substitutes one for the other.
+This package targets Go/Dolt Beads from `gastownhall/beads`, executable `bd`. It is not guidance for `br`/beads_rust and never substitutes one for the other.
 ## Authority order
 
 Apply instructions in this order:
