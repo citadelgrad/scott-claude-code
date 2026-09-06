@@ -1,0 +1,37 @@
+scripts/tests/test_beads_hermes_discovery_harness.py
+  s_a00c65db140d34::t_a32c689101263d 238-245
+  s_a00c65db140d34::t_b2c5c4a8606ddc 137-139,145-222,224-237,246-440
+  s_a00c65db140d34::t_0a24ac57d8c643 930-1083
+  s_a00c65db140d34::t_9a78a096be3a21 129
+skills/beads/scripts/hermes_discovery_harness.py
+  s_a00c65db140d34::t_c9514f7216e68c 1305-1311
+  s_a00c65db140d34::t_9a71f0fc015782 1335-1340,1352-1385
+  s_a00c65db140d34::t_eb84586a46a71d 13-14,19,26
+  s_a00c65db140d34::t_612e4761586d48 835-847
+  s_a00c65db140d34::t_676f335c8b67e5 80-88
+  s_a00c65db140d34::t_12f04bb8034914 25
+  s_a00c65db140d34::t_df3cdd7e2492fc 964-972,974,976
+  s_a00c65db140d34::t_0145ed2bddd4bd 1062,1074-1078,1098-1104,1124-1137
+  s_a00c65db140d34::t_070676e788084c 1220
+  s_a00c65db140d34::t_ba1b5c07b3bf63 1280-1291
+  s_a00c65db140d34::t_b83048a8e58ff0 814-834,848-916,918,920-923,950-951,954-963,973,975,977-980
+  s_a00c65db140d34::t_b2ab5945feb2f1 324-555,557-578
+  s_a00c65db140d34::t_256ce180ced6f6 1292,1341
+  s_a00c65db140d34::t_64b35a0fb8858a 556,1312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "88c8c90f5b2efe07afbb0001b99baca697d21aee",
+  "prompts": {},
+  "sessions": {
+    "s_a00c65db140d34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44259016-efee-4f82-857f-2ae96aa76d44",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Scott Nixon <citadelgrad@gmail.com>"
+    }
+  }
+}
