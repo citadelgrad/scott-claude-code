@@ -142,7 +142,7 @@ _BIDI = {
     )
 }
 _LABEL = re.compile(
-    r"(?i)(authorization|proxy-authorization|cookie|set-cookie|password|passwd|secret|token|api[-_ ]?key|access[-_ ]?key|private[-_ ]?key|client[-_ ]?secret)\s*[:=]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,;]+)"
+    r"(?i)(authorization|proxy-authorization|cookie|set-cookie|password|passwd|secret|token|api[-_ ]?key|access[-_ ]?key|private[-_ ]?key|client[-_ ]?secret)\s*[:=]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}|[^\s,;]+)"
 )
 _TOKEN = re.compile(
     r"(?i)(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}|(?:gh[opsu]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})"
