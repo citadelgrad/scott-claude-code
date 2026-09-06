@@ -1,0 +1,84 @@
+{
+  "id": "close-blocker-reprioritize-failure",
+  "description": "One evolving workspace evaluated as a sequence of independent live snapshots. Each step must be built from that step's snapshot alone -- no step's expected result can be derived by reusing or caching a previous step's FrontResult. The story: B blocks its dependent A in the same batch, B's later close unblocks A, a freshly discovered async gate then re-poisons the whole front, the gate's resolution plus a reprioritized/relimited pool changes who is selected, and a failure that reopens the previously-dispatched top candidate must be picked up by the very next recomputation.",
+  "ac": ["AC-T15-003"],
+  "steps": [
+    {
+      "step_id": "same_batch_block",
+      "description": "Initial capture: B and its dependent A are both ready. B has not closed within this batch, so A must not unlock alongside it.",
+      "hard_cap": 5,
+      "ready": [
+        { "id": "B", "dependency_ids": [], "owned_paths": ["src/b.py"] },
+        { "id": "A", "dependency_ids": ["B"], "owned_paths": ["src/a.py"] }
+      ],
+      "expected": {
+        "selected": ["B"],
+        "refusal": null,
+        "excluded": { "A": "SAME_BATCH_UNLOCK_FORBIDDEN" }
+      }
+    },
+    {
+      "step_id": "dependency_closed_unlocks_dependent",
+      "description": "B has since closed and a fresh live poll no longer surfaces it as ready at all; A's blocking dependency is gone from this batch, and independent candidate C has also become ready. A must now be selected -- a stale reuse of the previous step's result would still show A excluded.",
+      "hard_cap": 5,
+      "ready": [
+        { "id": "A", "dependency_ids": ["B"], "owned_paths": ["src/a.py"] },
+        { "id": "C", "dependency_ids": [], "owned_paths": ["other/c.py"] }
+      ],
+      "expected": {
+        "selected": ["A", "C"],
+        "refusal": null,
+        "excluded": {}
+      }
+    },
+    {
+      "step_id": "new_blocker_appears",
+      "description": "Same ready pool as the previous step (A, C), but a newly discovered async gate now targets A. Fresh recomputation must re-poison the whole front even though the immediately prior recomputation was clean.",
+      "hard_cap": 5,
+      "ready": [
+        { "id": "A", "dependency_ids": ["B"], "owned_paths": ["src/a.py"] },
+        { "id": "C", "dependency_ids": [], "owned_paths": ["other/c.py"] }
+      ],
+      "gates": [
+        { "id": "G", "target": "A", "status": "open", "type": "async" }
+      ],
+      "expected": {
+        "selected": [],
+        "refusal": "UNRESOLVED_ASYNC_GATE",
+        "excluded": {}
+      }
+    },
+    {
+      "step_id": "blocker_resolved_and_pool_reprioritized",
+      "description": "Gate G is gone entirely from the live query (resolved and no longer reported), a new higher-priority candidate D has appeared, and the pool is now read with live_ready_order=false and a tighter cap. Recomputation must reflect the new priority ordering and cap, not the previous step's membership or order.",
+      "hard_cap": 2,
+      "live_ready_order": false,
+      "ready": [
+        { "id": "A", "priority": 2, "dependency_ids": ["B"], "owned_paths": ["src/a.py"] },
+        { "id": "C", "priority": 2, "dependency_ids": [], "owned_paths": ["other/c.py"] },
+        { "id": "D", "priority": 0, "dependency_ids": [], "owned_paths": ["other/d.py"] }
+      ],
+      "expected": {
+        "selected": ["D", "A"],
+        "refusal": null,
+        "excluded": { "C": "CAPACITY_REACHED" }
+      }
+    },
+    {
+      "step_id": "failure_reopens_candidate",
+      "description": "D was dispatched in the previous step but its run failed, so bd reopened it back to ready. Freed capacity now covers the whole pool. The very next recomputation must pick D back up rather than remembering it as already handled.",
+      "hard_cap": 3,
+      "live_ready_order": false,
+      "ready": [
+        { "id": "A", "priority": 2, "dependency_ids": ["B"], "owned_paths": ["src/a.py"] },
+        { "id": "C", "priority": 2, "dependency_ids": [], "owned_paths": ["other/c.py"] },
+        { "id": "D", "priority": 0, "dependency_ids": [], "owned_paths": ["other/d.py"] }
+      ],
+      "expected": {
+        "selected": ["D", "A", "C"],
+        "refusal": null,
+        "excluded": {}
+      }
+    }
+  ]
+}

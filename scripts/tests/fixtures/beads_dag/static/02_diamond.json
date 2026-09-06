@@ -1,0 +1,18 @@
+{
+  "id": "diamond",
+  "description": "Diamond D<-{B,C}<-A. A has already closed elsewhere, so both parallel legs B and C are simultaneously ready; the convergence point D still depends on both and stays blocked (absent from ready).",
+  "ac": ["AC-T15-001"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "B", "dependency_ids": ["A"], "owned_paths": ["src/b.py"] },
+    { "id": "C", "dependency_ids": ["A"], "owned_paths": ["src/c.py"] }
+  ],
+  "blocked": [
+    { "id": "D", "blocked_by": ["B", "C"] }
+  ],
+  "expected": {
+    "selected": ["B", "C"],
+    "refusal": null,
+    "excluded": {}
+  }
+}

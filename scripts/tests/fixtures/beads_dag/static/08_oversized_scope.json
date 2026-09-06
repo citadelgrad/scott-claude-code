@@ -1,0 +1,15 @@
+{
+  "id": "oversized-scope",
+  "description": "A declares an oversized write scope (src/** -- the whole subtree) that is not itself blocked by any dependency, so ready membership for A is still correct. B declares a narrower literal path nested under that same subtree, so the two can never run concurrently even though neither is individually blocked.",
+  "ac": ["AC-T15-001", "AC-T15-004"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "A", "dependency_ids": [], "owned_paths": ["src/**"] },
+    { "id": "B", "dependency_ids": [], "owned_paths": ["src/module/file.py"] }
+  ],
+  "expected": {
+    "selected": ["A"],
+    "refusal": null,
+    "excluded": { "B": "WRITE_SCOPE_CONFLICT" }
+  }
+}

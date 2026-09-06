@@ -1,0 +1,20 @@
+{
+  "id": "overlap-and-unknown-never-concurrent",
+  "description": "Four candidates share one batch with a generous cap that would otherwise let all four run: M and N declare the identical literal path (overlap), P declares an ambiguous top-level wildcard (unknown), and Q is disjoint from everything. Capacity is never the limiting factor here -- only scope classification is.",
+  "ac": ["AC-T15-004"],
+  "hard_cap": 10,
+  "ready": [
+    { "id": "M", "dependency_ids": [], "owned_paths": ["config/shared.yaml"] },
+    { "id": "N", "dependency_ids": [], "owned_paths": ["config/shared.yaml"] },
+    { "id": "P", "dependency_ids": [], "owned_paths": ["*.env"] },
+    { "id": "Q", "dependency_ids": [], "owned_paths": ["docs/readme.md"] }
+  ],
+  "expected": {
+    "selected": ["M", "Q"],
+    "refusal": null,
+    "excluded": {
+      "N": "WRITE_SCOPE_CONFLICT",
+      "P": "WRITE_SCOPE_UNKNOWN"
+    }
+  }
+}

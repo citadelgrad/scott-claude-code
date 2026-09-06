@@ -1,0 +1,17 @@
+{
+  "id": "multi-root",
+  "description": "Two independent root chains (A's lane and X's lane) are both ready in the same batch; the coordination root issue R itself is present in the ready pool but must never be selected as a writing lane.",
+  "ac": ["AC-T15-001"],
+  "root_issue_id": "R",
+  "hard_cap": 5,
+  "ready": [
+    { "id": "R", "issue_type": "epic", "dependency_ids": [], "owned_paths": [] },
+    { "id": "A", "dependency_ids": [], "owned_paths": ["src/a.py"] },
+    { "id": "X", "dependency_ids": [], "owned_paths": ["other/x.py"] }
+  ],
+  "expected": {
+    "selected": ["A", "X"],
+    "refusal": null,
+    "excluded": { "R": "ROOT_ISSUE_EXCLUDED" }
+  }
+}

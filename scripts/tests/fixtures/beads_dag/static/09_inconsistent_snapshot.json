@@ -1,0 +1,18 @@
+{
+  "id": "inconsistent-snapshot",
+  "description": "The consistency check for A disagrees with its ready-list dependency data (a same-capture TOCTOU signal). U is an independent, individually clean candidate, but the whole front must still refuse.",
+  "ac": ["AC-T15-002"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "A", "dependency_ids": [], "owned_paths": ["src/a.py"] },
+    { "id": "U", "dependency_ids": [], "owned_paths": ["src/u.py"] }
+  ],
+  "consistency": {
+    "A": { "consistent": false, "detail": "dependency_ids disagree with a second read" }
+  },
+  "expected": {
+    "selected": [],
+    "refusal": "SNAPSHOT_INCONSISTENT",
+    "excluded": {}
+  }
+}

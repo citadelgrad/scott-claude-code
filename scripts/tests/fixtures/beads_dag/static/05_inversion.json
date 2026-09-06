@@ -1,0 +1,16 @@
+{
+  "id": "inversion",
+  "description": "A's declared dependency direction (from the canonical task graph) names OTHER_UNRELATED, but the freshly observed snapshot reports A depending on Z instead -- an inverted/mismatched edge. U is an independent, individually clean candidate, but the whole front must still refuse.",
+  "ac": ["AC-T15-001", "AC-T15-002"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "A", "dependency_ids": ["Z"], "owned_paths": ["src/a.py"] },
+    { "id": "U", "dependency_ids": [], "owned_paths": ["src/u.py"] }
+  ],
+  "declared_edges": { "A": ["OTHER_UNRELATED"] },
+  "expected": {
+    "selected": [],
+    "refusal": "DEPENDENCY_ORIENTATION_MISMATCH",
+    "excluded": {}
+  }
+}

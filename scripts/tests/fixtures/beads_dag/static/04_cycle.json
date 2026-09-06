@@ -1,0 +1,15 @@
+{
+  "id": "cycle",
+  "description": "A dependency cycle A->B->A is present in the captured cycle evidence. U is an independent, individually clean candidate, but the whole front must still refuse -- a poisoned graph anywhere in the pool means the pool as a whole cannot be trusted.",
+  "ac": ["AC-T15-001", "AC-T15-002"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "U", "dependency_ids": [], "owned_paths": ["src/u.py"] }
+  ],
+  "cycles": { "cycles": [["A", "B", "A"]], "count": 1 },
+  "expected": {
+    "selected": [],
+    "refusal": "DEPENDENCY_CYCLE",
+    "excluded": {}
+  }
+}

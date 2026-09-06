@@ -1,0 +1,18 @@
+{
+  "id": "human-decision-blocker",
+  "description": "A is gated by an open human-decision gate H. U is an independent, individually clean candidate, but the whole front must still refuse until a human resolves the gate.",
+  "ac": ["AC-T15-001", "AC-T15-002"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "A", "dependency_ids": [], "owned_paths": ["src/a.py"] },
+    { "id": "U", "dependency_ids": [], "owned_paths": ["src/u.py"] }
+  ],
+  "gates": [
+    { "id": "H", "target": "A", "status": "open", "type": "human" }
+  ],
+  "expected": {
+    "selected": [],
+    "refusal": "UNRESOLVED_HUMAN_GATE",
+    "excluded": {}
+  }
+}

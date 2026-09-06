@@ -1,0 +1,18 @@
+{
+  "id": "linear-chain",
+  "description": "A -> B -> C linear chain. Only the unblocked head (A) has been surfaced by bd's ready oracle; B and C are absent from ready because their blockers have not closed yet.",
+  "ac": ["AC-T15-001"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "A", "dependency_ids": [], "owned_paths": ["src/a.py"] }
+  ],
+  "blocked": [
+    { "id": "B", "blocked_by": ["A"] },
+    { "id": "C", "blocked_by": ["B"] }
+  ],
+  "expected": {
+    "selected": ["A"],
+    "refusal": null,
+    "excluded": {}
+  }
+}

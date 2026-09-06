@@ -1,0 +1,17 @@
+{
+  "id": "deferred-blocker",
+  "description": "DEFERRED is an issue explicitly deferred behind an unresolved blocker: bd's ready oracle never surfaces it, so it must be completely absent from both selected and excluded. U is an unrelated, independently ready candidate that must still proceed.",
+  "ac": ["AC-T15-001"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "U", "dependency_ids": [], "owned_paths": ["src/u.py"] }
+  ],
+  "blocked": [
+    { "id": "DEFERRED", "blocked_by": ["SOME_BLOCKER"] }
+  ],
+  "expected": {
+    "selected": ["U"],
+    "refusal": null,
+    "excluded": {}
+  }
+}

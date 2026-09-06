@@ -1,0 +1,15 @@
+{
+  "id": "same-batch-blocker",
+  "description": "B and its dependent A are both ready in the same batch. B has not yet closed within this batch (its selected-batch status stays whatever the ready record reports), so A must not be selected alongside it in the same pass even though B itself proceeds cleanly.",
+  "ac": ["AC-T15-003"],
+  "hard_cap": 5,
+  "ready": [
+    { "id": "B", "dependency_ids": [], "owned_paths": ["src/b.py"] },
+    { "id": "A", "dependency_ids": ["B"], "owned_paths": ["src/a.py"] }
+  ],
+  "expected": {
+    "selected": ["B"],
+    "refusal": null,
+    "excluded": { "A": "SAME_BATCH_UNLOCK_FORBIDDEN" }
+  }
+}
