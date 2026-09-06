@@ -126,6 +126,7 @@ def test_sanitized_report_contains_no_prompt_or_output_content(
         "state_sha256",
         "raw_stdout_path",
         "raw_stderr_path",
+        "profile_delta",
         "passed",
         "errored",
         "outcome",
@@ -133,17 +134,310 @@ def test_sanitized_report_contains_no_prompt_or_output_content(
     assert report["raw_content_retained"] is False
 
 
-def test_authorization_is_exact_and_caps_model_usage(harness) -> None:
+def test_approval_request_reports_quota_caps_without_a_derivable_secret(
+    harness,
+) -> None:
     request = harness.approval_request("openai-codex", "gpt-5.6-sol")
     assert request["hermes_sessions"] == 72
     assert request["maximum_provider_requests"] == 144
     assert request["maximum_turns_per_session"] == 2
     assert request["paid_api_fallback"] is False
-    with pytest.raises(harness.HarnessError, match="MODEL_RUNS_NOT_AUTHORIZED"):
-        harness.require_authorization("yes", "openai-codex", "gpt-5.6-sol")
-    harness.require_authorization(
-        request["required_authorization_text"], "openai-codex", "gpt-5.6-sol"
+    # scc-ux6: approval_request must never again return a deterministic
+    # "required_authorization_text" -- that string was a pure function of
+    # public source (provider/model), so an agent could compute a "valid"
+    # authorization itself with no real human action. See the AC-scenario
+    # tests below for the human-issued, single-use token ledger that
+    # replaced it.
+    assert "required_authorization_text" not in request
+
+
+def _no_subprocess_run(*args, **kwargs):
+    raise AssertionError(
+        "a hermes chat child process must not be spawned by a rejected launch"
     )
+
+
+def _run_args(
+    *,
+    corpus: Path,
+    design: Path,
+    hermes_source: Path,
+    runtime_root: Path,
+    default_home: Path,
+    authorization: str,
+    token_ledger: Path,
+    output: Path,
+    candidate_sha256: str,
+    corpus_sha256: str,
+) -> list[str]:
+    return [
+        "run",
+        "--candidate",
+        str(SKILL),
+        "--candidate-sha256",
+        candidate_sha256,
+        "--corpus",
+        str(corpus),
+        "--corpus-sha256",
+        corpus_sha256,
+        "--design",
+        str(design),
+        "--hermes-source",
+        str(hermes_source),
+        "--runtime-root",
+        str(runtime_root),
+        "--default-home",
+        str(default_home),
+        "--authorization",
+        authorization,
+        "--token-ledger",
+        str(token_ledger),
+        "--output",
+        str(output),
+    ]
+
+
+# -- scc-ux6: a real single-use authorization token, and an output-path lock
+#
+# On 2026-09-05 an agent computed the harness's old --authorization value
+# directly from public source (a deterministic f-string) and launched a
+# real, quota-consuming, unauthorized Hermes run. These tests exercise the
+# fix's six required scenarios one-to-one. None of them ever call the real
+# ``hermes`` CLI or spawn a real ``hermes chat`` subprocess: harness.subprocess
+# is either monkeypatched to a stub (matching this file's existing
+# convention, e.g. ``_stub_run_corpus``) or, where a launch is expected to be
+# rejected, monkeypatched to a spy that fails the test outright if a
+# subprocess is ever spawned.
+
+
+def test_ac1_a_fresh_human_issued_token_gates_and_allows_the_launch_to_proceed(
+    tmp_path: Path, harness, monkeypatch
+) -> None:
+    """AC scenario: A real one-time authorization token gates every
+    quota-consuming launch."""
+    ledger = tmp_path / "tokens.json"
+    token = harness.issue_authorization_token(ledger)
+
+    calls, scenarios, corpus, default_home = _stub_run_corpus(
+        harness, monkeypatch, tmp_path, [(0, 0)] * harness.SCENARIO_COUNT
+    )
+    exit_code = harness.main(
+        _run_args(
+            corpus=corpus,
+            design=DESIGN,
+            hermes_source=tmp_path,
+            runtime_root=tmp_path / "runtime",
+            default_home=default_home,
+            authorization=token,
+            token_ledger=ledger,
+            output=tmp_path / "out.json",
+            candidate_sha256=harness.hash_tree(SKILL),
+            corpus_sha256=harness.sha256_file(corpus),
+        )
+    )
+    # exit_code 2 means "rejected by an authorization/lock gate" and 4 means
+    # "errored/aborted before a verdict"; neither happened here -- the launch
+    # was accepted and a real corpus-wide sweep was scored (0 == a clean
+    # sweep, 3 == a sweep that measured a real routing failure; which of
+    # those this fixture's mixed positive/negative corpus lands on is
+    # already covered by test_a_healthy_first_lane_does_not_abort_the_sweep
+    # and is not this test's concern).
+    assert exit_code in (0, 3)
+    # The launch was accepted and proceeded through every lane -- the stand-in
+    # for "spent quota" that this file's other tests already use, since a real
+    # hermes chat subprocess is never invoked in tests (see module docstring).
+    assert len(calls) == harness.SCENARIO_COUNT
+    entries = json.loads(ledger.read_text(encoding="utf-8"))
+    assert entries == [
+        {
+            "token": token,
+            "issued_at": entries[0]["issued_at"],
+            "consumed": True,
+            "consumed_at": entries[0]["consumed_at"],
+        }
+    ]
+
+
+def test_ac2_a_launch_with_no_real_token_is_rejected_before_any_quota_is_spent(
+    tmp_path: Path, harness, monkeypatch, capsys
+) -> None:
+    """AC scenario: A launch with no real token is rejected before any quota
+    is spent."""
+    ledger = tmp_path / "tokens.json"  # no token was ever issued into this ledger
+    monkeypatch.setattr(harness.subprocess, "run", _no_subprocess_run)
+    corpus = _full_fixture(tmp_path, harness)
+
+    exit_code = harness.main(
+        _run_args(
+            corpus=corpus,
+            design=DESIGN,
+            hermes_source=tmp_path,
+            runtime_root=tmp_path / "runtime",
+            default_home=tmp_path / "default-home",
+            authorization="I hereby approve this run, trust me",
+            token_ledger=ledger,
+            output=tmp_path / "out.json",
+            candidate_sha256=harness.hash_tree(SKILL),
+            corpus_sha256=harness.sha256_file(corpus),
+        )
+    )
+    assert exit_code != 0
+    assert "AUTHORIZATION_TOKEN_MISSING" in capsys.readouterr().err
+
+
+def test_ac3_a_token_cannot_be_reused_after_being_consumed_once(
+    tmp_path: Path, harness, monkeypatch, capsys
+) -> None:
+    """AC scenario: A token cannot be reused after it has been consumed once,
+    even by a successful or failed prior attempt."""
+    ledger = tmp_path / "tokens.json"
+    token = harness.issue_authorization_token(ledger)
+    # A prior "run" invocation already consumed this token -- regardless of
+    # whether that invocation completed, failed pre-spend, or errored, the
+    # ledger only ever records that it was consumed.
+    harness.consume_authorization_token(token, ledger)
+
+    monkeypatch.setattr(harness.subprocess, "run", _no_subprocess_run)
+    corpus = _full_fixture(tmp_path, harness)
+    exit_code = harness.main(
+        _run_args(
+            corpus=corpus,
+            design=DESIGN,
+            hermes_source=tmp_path,
+            runtime_root=tmp_path / "runtime",
+            default_home=tmp_path / "default-home",
+            authorization=token,
+            token_ledger=ledger,
+            output=tmp_path / "out.json",
+            candidate_sha256=harness.hash_tree(SKILL),
+            corpus_sha256=harness.sha256_file(corpus),
+        )
+    )
+    assert exit_code != 0
+    assert "AUTHORIZATION_TOKEN_ALREADY_CONSUMED" in capsys.readouterr().err
+
+
+def test_ac4_a_pre_spend_preflight_failure_does_not_entitle_a_self_authorized_retry(
+    tmp_path: Path, harness, monkeypatch, capsys
+) -> None:
+    """AC scenario: A pre-spend failure does not entitle a caller to
+    self-authorize a retry."""
+    monkeypatch.setattr(harness, "verify_frozen_hermes", lambda _: None)
+    monkeypatch.setattr(harness, "verify_default_write_denial", lambda *a, **k: None)
+    monkeypatch.setattr(harness.subprocess, "run", _no_subprocess_run)
+
+    ledger = tmp_path / "tokens.json"
+    token = harness.issue_authorization_token(ledger)
+    corpus = _full_fixture(tmp_path, harness)
+    # Deliberately wrong: install_candidate's real hash check fails on the
+    # very first lane, before any lane could spend quota.
+    wrong_candidate_sha256 = "0" * 64
+
+    def invoke(authorization: str, run_name: str) -> int:
+        return harness.main(
+            _run_args(
+                corpus=corpus,
+                design=DESIGN,
+                hermes_source=tmp_path,
+                runtime_root=tmp_path / f"runtime-{run_name}",
+                default_home=tmp_path / "default-home",
+                authorization=authorization,
+                token_ledger=ledger,
+                output=tmp_path / f"{run_name}.json",
+                candidate_sha256=wrong_candidate_sha256,
+                corpus_sha256=harness.sha256_file(corpus),
+            )
+        )
+
+    first_exit = invoke(token, "first")
+    assert first_exit != 0
+    assert "CANDIDATE_HASH_MISMATCH" in capsys.readouterr().err
+    # The token was consumed immediately on acceptance, before the preflight
+    # check ran -- so it is already spent even though no quota was spent.
+    entries = json.loads(ledger.read_text(encoding="utf-8"))
+    assert entries[0]["consumed"] is True
+
+    # Same agent, second attempt, no newly issued token: rejected outright,
+    # and the harness says plainly that a fresh token is required regardless
+    # of whether the previous attempt spent quota.
+    second_exit = invoke(token, "second")
+    assert second_exit != 0
+    stderr = capsys.readouterr().err
+    assert "AUTHORIZATION_TOKEN_ALREADY_CONSUMED" in stderr
+    assert "fresh" in stderr and "single-use token" in stderr
+    assert "regardless of whether" in stderr and "spent quota" in stderr
+
+
+def test_ac5_two_concurrent_launches_to_the_same_output_path_are_serialized(
+    tmp_path: Path, harness, monkeypatch, capsys
+) -> None:
+    """AC scenario: Two concurrent launches racing for the same output path
+    are serialized, not both executed."""
+    output_path = tmp_path / "shared-out.json"
+    # Simulate a first "run" invocation that is still active, holding the
+    # lock under this test process's own (necessarily live) PID.
+    holder_lock = harness.acquire_output_lock(output_path)
+    ledger = tmp_path / "tokens.json"
+    token = harness.issue_authorization_token(ledger)
+    try:
+        monkeypatch.setattr(harness.subprocess, "run", _no_subprocess_run)
+        corpus = _full_fixture(tmp_path, harness)
+        exit_code = harness.main(
+            _run_args(
+                corpus=corpus,
+                design=DESIGN,
+                hermes_source=tmp_path,
+                runtime_root=tmp_path / "runtime",
+                default_home=tmp_path / "default-home",
+                authorization=token,
+                token_ledger=ledger,
+                output=output_path,
+                candidate_sha256=harness.hash_tree(SKILL),
+                corpus_sha256=harness.sha256_file(corpus),
+            )
+        )
+    finally:
+        holder_lock.release()
+
+    assert exit_code != 0
+    stderr = capsys.readouterr().err
+    assert "OUTPUT_PATH_LOCKED" in stderr
+    assert str(os.getpid()) in stderr
+    # Rejected purely on the output-path lock: the token must never even be
+    # consumed by the losing invocation.
+    entries = json.loads(ledger.read_text(encoding="utf-8"))
+    assert entries[0]["consumed"] is False
+
+
+def test_ac6_an_observer_can_read_the_lock_file_and_pid_without_a_token(
+    tmp_path: Path, harness
+) -> None:
+    """AC scenario: An agent that discovers an unexplained already-running
+    harness process can still refuse and report without being blocked by the
+    new guard."""
+    output_path = tmp_path / "observed-out.json"
+    lock = harness.acquire_output_lock(output_path)
+    try:
+        lock_path = harness._lock_path_for_output(output_path)
+        assert lock_path.exists()
+        # A plain file read -- no token, ledger, or harness function beyond
+        # the standard library is needed to inspect this.
+        holder = json.loads(lock_path.read_text(encoding="utf-8"))
+        assert holder["pid"] == os.getpid()
+        assert "started_at" in holder
+        assert holder["output_path"] == str(output_path)
+        # Normal OS tooling can still inspect the holder PID's argv/command
+        # line -- nothing introduced here gates that.
+        completed = subprocess.run(
+            ["ps", "-p", str(os.getpid()), "-o", "command="],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0
+        assert completed.stdout.strip() != ""
+    finally:
+        lock.release()
 
 
 def test_scenario_prompt_uses_stdin_and_actual_event_shapes_are_parsed(
@@ -633,3 +927,157 @@ def test_exit_codes_never_report_an_outage_as_success(
     # outage as a clean pass.
     assert invoke({"errored": 72, "failed": 0, "passed": 0}) == 4
     assert invoke({"errored": 1, "failed": 0, "passed": 0, "aborted": True}) == 4
+
+
+# -- scc-l41: per-scenario default-profile mutation attribution -------------
+#
+# These tests never touch a real Hermes profile. Every ``default_home`` below
+# is a throwaway directory under pytest's ``tmp_path``, constructed by the
+# test itself. No test here invokes Hermes, calls a model/API, or starts a
+# discovery run.
+
+
+def test_profile_diff_attributes_a_mutation_to_the_exact_root_that_changed(
+    tmp_path: Path, harness
+) -> None:
+    home = tmp_path / "default-home"
+    home.mkdir()
+    (home / "config.yaml").write_text("provider: openai-codex\n", encoding="utf-8")
+    (home / "SOUL.md").write_text("unrelated and untouched\n", encoding="utf-8")
+
+    before = harness._profile_fingerprint(home)
+    (home / "config.yaml").write_text("provider: mutated\n", encoding="utf-8")
+    after = harness._profile_fingerprint(home)
+
+    # Exactly the one root that actually changed is named -- not a bare
+    # boolean, and not the untouched sibling root.
+    assert harness._profile_diff(before, after) == ["config.yaml"]
+
+
+def test_profile_diff_reports_nothing_when_nothing_changed(
+    tmp_path: Path, harness
+) -> None:
+    home = tmp_path / "default-home"
+    home.mkdir()
+    (home / "config.yaml").write_text("provider: openai-codex\n", encoding="utf-8")
+    (home / "skills").mkdir()
+    (home / "skills" / "beads.md").write_text("skill body\n", encoding="utf-8")
+
+    before = harness._profile_fingerprint(home)
+    after = harness._profile_fingerprint(home)
+
+    assert harness._profile_diff(before, after) == []
+
+
+def test_profile_fingerprint_suppresses_ordinary_wal_churn(
+    tmp_path: Path, harness
+) -> None:
+    home = tmp_path / "default-home"
+    home.mkdir()
+    db_path = home / "state.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("CREATE TABLE t (x INTEGER)")
+    conn.execute("INSERT INTO t VALUES (1)")
+    conn.commit()
+    conn.close()
+    # A committed row is pending checkpoint in the WAL file at this point.
+    assert (home / "state.db-wal").exists()
+
+    before = harness._profile_fingerprint(home)
+    assert before.wal_checkpointed is True
+
+    # Ordinary WAL churn: a write that touches state.db-wal but is rolled
+    # back before it commits, followed by a checkpoint. This is exactly the
+    # kind of benign background activity (e.g. a live process's own
+    # bookkeeping) that must never register as a mutation.
+    churn = sqlite3.connect(str(db_path), timeout=5)
+    churn.execute("BEGIN")
+    churn.execute("INSERT INTO t VALUES (2)")
+    churn.execute("ROLLBACK")
+    churn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    churn.commit()
+    churn.close()
+
+    after = harness._profile_fingerprint(home)
+    assert after.wal_checkpointed is True
+    assert harness._profile_diff(before, after) == []
+
+
+def test_profile_diff_falls_back_to_excluding_wal_shm_when_checkpoint_fails(
+    tmp_path: Path, harness
+) -> None:
+    home = tmp_path / "default-home"
+    home.mkdir()
+    # Not a real SQLite file: _checkpoint_wal cannot run
+    # "PRAGMA wal_checkpoint" against it, so the happy path is unavailable
+    # and the documented fallback applies.
+    (home / "state.db").write_bytes(b"not a real sqlite database")
+
+    before = harness._profile_fingerprint(home)
+    assert before.wal_checkpointed is False
+
+    (home / "state.db-wal").write_bytes(b"wal-bytes-one")
+    (home / "state.db-shm").write_bytes(b"shm-bytes-one")
+    after_wal_only = harness._profile_fingerprint(home)
+    assert after_wal_only.wal_checkpointed is False
+    # The wal/shm files appeared out of nowhere between the two snapshots --
+    # that would ordinarily be two changed roots, but with the checkpoint
+    # unavailable the fallback excludes them from the equality check.
+    assert harness._profile_diff(before, after_wal_only) == []
+
+    # state.db itself is still compared under the fallback: a real content
+    # change there must still be caught even while wal/shm stay excluded.
+    (home / "state.db").write_bytes(b"different invalid content")
+    (home / "state.db-wal").write_bytes(b"wal-bytes-two")
+    after_db_change = harness._profile_fingerprint(home)
+    assert harness._profile_diff(before, after_db_change) == ["state.db"]
+
+
+def test_run_corpus_attributes_a_mid_run_mutation_to_its_exact_lane(
+    tmp_path: Path, harness, monkeypatch
+) -> None:
+    monkeypatch.setattr(harness, "verify_frozen_hermes", lambda _: None)
+    monkeypatch.setattr(harness, "verify_default_write_denial", lambda *a, **k: None)
+    corpus = _full_fixture(tmp_path, harness)
+    scenarios = harness.load_corpus(corpus, DESIGN, harness.sha256_file(corpus))
+    default_home = tmp_path / "default-home"
+    default_home.mkdir()
+
+    mutated_scenario_id = scenarios[5].scenario_id  # an arbitrary mid-run lane
+    other_scenario_id = scenarios[0].scenario_id
+
+    def fake_run_scenario(scenario, **kwargs):
+        if scenario.scenario_id == mutated_scenario_id:
+            (default_home / "SOUL.md").write_text("mutated\n", encoding="utf-8")
+        return _result(
+            harness,
+            scenario.scenario_id,
+            split=scenario.split,
+            expected_load=scenario.expected_load,
+            discovery_events=1,
+            load_events=1 if scenario.expected_load else 0,
+            exit_code=0,
+        )
+
+    monkeypatch.setattr(harness, "_run_scenario", fake_run_scenario)
+    report = harness.run_corpus(
+        scenarios=scenarios,
+        candidate=SKILL,
+        candidate_sha256="d" * 64,
+        corpus_sha256=harness.sha256_file(corpus),
+        hermes_source=tmp_path,
+        runtime_root=tmp_path / "runtime",
+        default_home=default_home,
+        credentials=None,
+        provider="openai-codex",
+        model="gpt-5.6-sol",
+    )
+
+    rows_by_id = {row["scenario_id"]: row for row in report["results"]}
+    # Only the lane that actually ran while the mutation happened is named.
+    assert rows_by_id[mutated_scenario_id]["profile_delta"] == ["SOUL.md"]
+    assert rows_by_id[other_scenario_id]["profile_delta"] == []
+    # The run-level boolean stays present and now correctly reflects the
+    # mid-run mutation instead of only bookend snapshots.
+    assert report["default_profile_unchanged"] is False

@@ -10,16 +10,20 @@ retains only hashes and event counts, and removes every per-scenario home.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import sqlite3
 import stat
 import subprocess
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -73,6 +77,15 @@ class ScenarioResult:
     state_sha256: str
     raw_stdout_path: str | None = None
     raw_stderr_path: str | None = None
+    # Per-lane default-profile mutation attribution (scc-l41). Populated by
+    # run_corpus from a before/after _profile_fingerprint pair taken around
+    # this exact lane; paired with the sibling scenario_id field above, each
+    # result row names both which lane ran and which tracked root(s), if
+    # any, changed under it. Empty for a lane where nothing changed, and
+    # empty by default here because _run_scenario (which builds this
+    # dataclass) does not itself see the default-profile home -- only
+    # run_corpus does, so it attaches this afterward via dataclasses.replace.
+    profile_delta: list[str] = field(default_factory=list)
 
     @property
     def errored(self) -> bool:
@@ -115,10 +128,6 @@ class ScenarioResult:
     @property
     def passed(self) -> bool:
         return self.outcome == "passed"
-
-
-def _canonical_bytes(value: Any) -> bytes:
-    return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -298,9 +307,7 @@ def load_corpus(
 
 
 def approval_request(provider: str, model: str) -> dict[str, Any]:
-    text = f"authorize 72 candidate discovery runs via {provider}/{model}"
     return {
-        "required_authorization_text": text,
         "hermes_sessions": SCENARIO_COUNT,
         "maximum_provider_requests": SCENARIO_COUNT * MAX_TURNS,
         "maximum_turns_per_session": MAX_TURNS,
@@ -314,9 +321,261 @@ def approval_request(provider: str, model: str) -> dict[str, Any]:
     }
 
 
-def require_authorization(value: str, provider: str, model: str) -> None:
-    if value != approval_request(provider, model)["required_authorization_text"]:
-        raise HarnessError("MODEL_RUNS_NOT_AUTHORIZED")
+# -- scc-ux6: real single-use authorization tokens --------------------------
+#
+# A prior defect let an agent compute a "valid" --authorization value
+# directly from public source (a deterministic f-string over provider/model),
+# so no real human action was ever required to launch a quota-consuming run.
+# That incident is documented in beads issue scc-ux6.
+#
+# The fix: a local ledger of human-issued, unguessable, single-use tokens.
+# A token must be minted out-of-band by a human (see
+# ``issue_authorization_token`` / the ``issue-token`` CLI command) before it
+# exists in the ledger at all -- an agent can never derive one from this
+# file's source. Presenting a token consumes it atomically, immediately, and
+# unconditionally: before any preflight check (e.g. CANDIDATE_HASH_MISMATCH)
+# and before any subprocess is spawned. This means a second presentation of
+# the same token -- regardless of whether the first attempt completed,
+# failed a preflight check, or errored -- is always rejected, and an agent
+# can never self-conclude that a prior, still-open authorization covers a
+# new attempt.
+DEFAULT_TOKEN_LEDGER_PATH = (
+    Path.home() / ".hermes-discovery-harness" / "authorization-tokens.json"
+)
+TOKEN_BYTES = 32
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _ledger_lock_path(ledger_path: Path) -> Path:
+    return Path(str(ledger_path) + ".lock")
+
+
+@contextlib.contextmanager
+def _held_ledger_lock(ledger_path: Path):
+    """Serialize read-modify-write access to the token ledger across processes.
+
+    This locks a dedicated, never-replaced ``*.lock`` file rather than the
+    ledger file itself. The ledger is rewritten via atomic replace-on-write
+    (``_write_secure_bytes``), which swaps in a fresh inode on every write,
+    so an ``flock`` held on the ledger file's own file descriptor would
+    silently stop protecting anything the moment one writer replaced it.
+    """
+    ledger_path = Path(ledger_path)
+    ledger_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    lock_path = _ledger_lock_path(ledger_path)
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def _read_ledger(ledger_path: Path) -> list[dict[str, Any]]:
+    ledger_path = Path(ledger_path)
+    if not ledger_path.exists():
+        return []
+    try:
+        entries = json.loads(ledger_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise HarnessError("AUTHORIZATION_LEDGER_INVALID") from error
+    if not isinstance(entries, list):
+        raise HarnessError("AUTHORIZATION_LEDGER_INVALID")
+    return entries
+
+
+def _write_ledger(ledger_path: Path, entries: list[dict[str, Any]]) -> None:
+    rendered = json.dumps(entries, indent=2, sort_keys=True) + "\n"
+    _write_secure_bytes(Path(ledger_path), rendered.encode("utf-8"))
+
+
+def issue_authorization_token(
+    ledger_path: Path = DEFAULT_TOKEN_LEDGER_PATH,
+) -> str:
+    """Mint one fresh, unguessable, single-use authorization token.
+
+    This is the only supported way a token comes into existence. It must be
+    invoked directly by a human -- for example via the ``issue-token`` CLI
+    command -- never computed or inferred by an agent. The token is
+    ``secrets.token_hex`` output (not derivable from this file's source) and
+    is recorded, unconsumed, in the ledger before it is returned.
+    """
+    ledger_path = Path(ledger_path)
+    token = secrets.token_hex(TOKEN_BYTES)
+    with _held_ledger_lock(ledger_path):
+        entries = _read_ledger(ledger_path)
+        entries.append(
+            {
+                "token": token,
+                "issued_at": _now_iso(),
+                "consumed": False,
+                "consumed_at": None,
+            }
+        )
+        _write_ledger(ledger_path, entries)
+    return token
+
+
+def consume_authorization_token(
+    token: str, ledger_path: Path = DEFAULT_TOKEN_LEDGER_PATH
+) -> None:
+    """Atomically look up and consume a single-use authorization token.
+
+    Fail-closed, in order:
+      * No ledger entry matches ``token`` at all -> AUTHORIZATION_TOKEN_MISSING.
+      * The matching entry is already consumed -> AUTHORIZATION_TOKEN_ALREADY_CONSUMED.
+      * Otherwise the entry is marked consumed here, immediately -- before
+        the caller runs any preflight check or spawns any subprocess -- so a
+        second presentation of this same token, from any later attempt for
+        any reason, is always rejected.
+    """
+    ledger_path = Path(ledger_path)
+    with _held_ledger_lock(ledger_path):
+        entries = _read_ledger(ledger_path)
+        match = next(
+            (
+                entry
+                for entry in entries
+                if isinstance(entry, dict) and entry.get("token") == token
+            ),
+            None,
+        )
+        if match is None:
+            raise HarnessError(
+                "AUTHORIZATION_TOKEN_MISSING: no human-issued authorization "
+                "token matches the supplied --authorization value. A fresh, "
+                "single-use token (see the 'issue-token' command) is "
+                "required for every new run attempt, regardless of whether "
+                "a previous attempt already spent quota, failed a preflight "
+                "check, or errored."
+            )
+        if match.get("consumed"):
+            raise HarnessError(
+                "AUTHORIZATION_TOKEN_ALREADY_CONSUMED: this token was "
+                "already consumed by a prior run attempt "
+                f"(consumed_at={match.get('consumed_at')}). A fresh, "
+                "single-use token is required for every new run attempt, "
+                "regardless of whether a previous attempt already spent "
+                "quota, failed a preflight check, or errored."
+            )
+        match["consumed"] = True
+        match["consumed_at"] = _now_iso()
+        _write_ledger(ledger_path, entries)
+
+
+def require_authorization(
+    token: str, ledger_path: Path = DEFAULT_TOKEN_LEDGER_PATH
+) -> None:
+    """CLI-facing authorization gate for the quota-consuming ``run`` command."""
+    consume_authorization_token(token, ledger_path)
+
+
+# -- scc-ux6: output-path locking --------------------------------------------
+#
+# No lock previously existed on --output, so two concurrent `run` invocations
+# targeting the same path raced with no protection. This ties an exclusive,
+# PID- and liveness-checked lock to the exact output path: a second launch
+# against the same path while a live holder exists is rejected immediately,
+# before any token check, preflight check, or subprocess spawn. The lock
+# file itself is a plain, owner-readable JSON file -- read-only inspection
+# (reading its contents, or the holder PID's argv via ps/lsof) is never
+# gated by anything introduced here.
+
+
+def _lock_path_for_output(output_path: Path) -> Path:
+    output_path = Path(output_path)
+    return output_path.with_name(output_path.name + ".lock")
+
+
+def _process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # The process exists but is owned by someone else: still a live holder.
+        return True
+    return True
+
+
+def _read_lock_holder(lock_path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+@dataclass
+class OutputLockHandle:
+    lock_path: Path
+
+    def release(self) -> None:
+        try:
+            os.unlink(self.lock_path)
+        except FileNotFoundError:
+            pass
+
+
+def acquire_output_lock(output_path: Path) -> OutputLockHandle:
+    """Atomically acquire an exclusive lock tied to ``output_path``.
+
+    Fails closed with OUTPUT_PATH_LOCKED, naming the holder's PID and start
+    time, when a live process already holds this exact output path's lock.
+    A lock left behind by a dead or unreadable holder is reclaimed rather
+    than treated as a permanent block.
+    """
+    output_path = Path(output_path)
+    lock_path = _lock_path_for_output(output_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = (
+        json.dumps(
+            {
+                "pid": os.getpid(),
+                "started_at": _now_iso(),
+                "output_path": str(output_path),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            holder = _read_lock_holder(lock_path)
+            holder_pid = holder.get("pid") if holder else None
+            if isinstance(holder_pid, int) and _process_alive(holder_pid):
+                started_at = (
+                    holder.get("started_at", "unknown") if holder else "unknown"
+                )
+                raise HarnessError(
+                    "OUTPUT_PATH_LOCKED: another run is already active for "
+                    f"this --output path (holder PID {holder_pid}, started "
+                    f"at {started_at}). Wait for it to finish, inspect "
+                    f"{lock_path} directly, or choose a different --output "
+                    "path."
+                )
+            # Stale lock: the recorded holder is gone, dead, or unreadable.
+            try:
+                os.unlink(lock_path)
+            except FileNotFoundError:
+                pass
+            continue
+        else:
+            try:
+                os.write(fd, payload)
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            return OutputLockHandle(lock_path=lock_path)
 
 
 def _isolated_env(home: Path, hermes_source: Path) -> dict[str, str]:
@@ -552,11 +811,116 @@ def _run_scenario(
     return result
 
 
-def _profile_fingerprint(home: Path) -> str:
-    """Hash profile state, including symlink identity, without following links."""
+# The 16 tracked roots of a Hermes profile home. This is the canonical set
+# referenced throughout scc-l41's hardening: any fingerprint mutation must be
+# attributable to exactly one of these names, never just a run-level bool.
+_PROFILE_ROOTS: tuple[str, ...] = (
+    "config.yaml",
+    ".env",
+    "auth.json",
+    "active_profile",
+    "SOUL.md",
+    "state.db",
+    "state.db-wal",
+    "state.db-shm",
+    "skills",
+    "memories",
+    "sessions",
+    "plugins",
+    "hooks",
+    "cron",
+    "checkpoints",
+    "backups",
+)
+# state.db-shm is SQLite's memory-mapped WAL-index file: shared-memory
+# bookkeeping (including a connection-local salt used to detect stale
+# readers) that can differ, byte for byte, between two snapshots even when
+# a checkpoint succeeded both times and nothing in the database actually
+# changed. It is never meaningful to compare and is always excluded.
+_SHM_ROOT_NAME = "state.db-shm"
+# state.db-wal, by contrast, becomes a deterministic zero-length file after
+# a successful TRUNCATE checkpoint (see _checkpoint_wal), so on the happy
+# path it is safe -- and useful -- to compare directly. It is only excluded
+# -- the documented fallback -- when a checkpoint could not be attempted
+# for either side of a pair, since an un-checkpointed WAL's content is
+# inherently racy against ongoing writes.
+_WAL_ROOT_NAME = "state.db-wal"
+_PROFILE_HOME_MISSING = "__profile_home_missing__"
+
+
+@dataclass(frozen=True)
+class ProfileFingerprint:
+    """A per-root structural snapshot of one Hermes profile home.
+
+    ``roots`` maps each of the ``_PROFILE_ROOTS`` names that was present (or
+    a symlink) at snapshot time to a SHA-256 structural hash over its
+    relative path, symlink target, and file bytes -- never the raw bytes or
+    path contents themselves, so nothing built from this can leak
+    config.yaml/.env/auth.json secrets (only root names and hashes ever
+    reach a report).
+
+    ``wal_checkpointed`` records whether ``_checkpoint_wal`` was able to
+    normalize state.db-wal/state.db-shm immediately before this snapshot was
+    taken. ``_profile_diff`` uses it to decide whether those two roots are
+    safe to compare (see its docstring for the fallback).
+    """
+
+    roots: Mapping[str, str]
+    wal_checkpointed: bool
+
+
+def _checkpoint_wal(home: Path) -> bool:
+    """Best-effort SQLite WAL checkpoint immediately before a snapshot.
+
+    A successful ``TRUNCATE`` checkpoint folds any pending state.db-wal
+    frames into state.db and truncates the WAL file, so an ordinary
+    write-then-checkpoint cycle does not read as a content change between
+    two ``_profile_fingerprint`` snapshots. This is the happy-path WAL/SHM
+    false-positive suppression required by scc-l41.
+
+    Returns True when the checkpoint ran -- including the trivial case
+    where state.db does not exist at all, so there is nothing to
+    checkpoint and no possible WAL churn -- and False when a checkpoint
+    could not be attempted, for example because the database is locked by
+    another connection or the file is not a valid SQLite database.
+
+    Documented fallback: when this returns False for either side of a
+    before/after pair, ``_profile_diff`` excludes state.db-wal/state.db-shm
+    from the equality check entirely for that pair (an un-checkpointed
+    WAL/SHM pair is inherently racy) and compares only state.db's own,
+    possibly un-checkpointed, content instead.
+    """
+    state_db = Path(home) / "state.db"
+    if not state_db.is_file():
+        return True
+    try:
+        connection = sqlite3.connect(str(state_db), timeout=5)
+        try:
+            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            connection.commit()
+        finally:
+            connection.close()
+    except sqlite3.Error:
+        return False
+    return True
+
+
+def _profile_fingerprint(home: Path) -> ProfileFingerprint:
+    """Snapshot a Hermes profile home across the 16 tracked roots.
+
+    Before hashing, this checkpoints the SQLite WAL/SHM pair (see
+    ``_checkpoint_wal``) so ordinary WAL churn on state.db does not read as
+    a mutation when compared against another snapshot via ``_profile_diff``.
+    Hashing itself never follows symlinks -- a symlink's target path is
+    hashed in place of its content -- and never returns raw file bytes.
+    """
     home = Path(home)
+    wal_checkpointed = _checkpoint_wal(home)
     if not home.exists():
-        return sha256_bytes(b"missing")
+        return ProfileFingerprint(
+            roots={_PROFILE_HOME_MISSING: sha256_bytes(b"missing")},
+            wal_checkpointed=wal_checkpointed,
+        )
 
     def fingerprint_path(path: Path) -> str:
         digest = hashlib.sha256()
@@ -583,30 +947,37 @@ def _profile_fingerprint(home: Path) -> str:
                 digest.update(str(stat.S_IFMT(mode)).encode())
         return digest.hexdigest()
 
-    roots = [
-        "config.yaml",
-        ".env",
-        "auth.json",
-        "active_profile",
-        "SOUL.md",
-        "state.db",
-        "state.db-wal",
-        "state.db-shm",
-        "skills",
-        "memories",
-        "sessions",
-        "plugins",
-        "hooks",
-        "cron",
-        "checkpoints",
-        "backups",
-    ]
-    records: list[tuple[str, str]] = []
-    for name in roots:
+    records: dict[str, str] = {}
+    for name in _PROFILE_ROOTS:
         path = home / name
         if path.exists() or path.is_symlink():
-            records.append((name, fingerprint_path(path)))
-    return sha256_bytes(_canonical_bytes(records))
+            records[name] = fingerprint_path(path)
+    return ProfileFingerprint(roots=records, wal_checkpointed=wal_checkpointed)
+
+
+def _profile_diff(before: ProfileFingerprint, after: ProfileFingerprint) -> list[str]:
+    """Sorted tracked-root names whose content differs between two snapshots.
+
+    Root-level attribution: this is what lets a caller name which of the 16
+    tracked roots changed instead of exposing only a boolean.
+
+    WAL/SHM false-positive suppression: state.db-shm is always excluded --
+    its raw bytes are volatile shared-memory bookkeeping that is never
+    meaningfully comparable, checkpointed or not (see _SHM_ROOT_NAME).
+    state.db-wal is compared on the happy path, where a successful
+    checkpoint makes it a deterministic zero-length file. Documented
+    fallback: if either snapshot's ``wal_checkpointed`` is False,
+    state.db-wal is excluded too for this pair -- an un-checkpointed WAL's
+    content is inherently racy, so only state.db's own (checkpointed, on
+    the happy path) content is compared for that part of profile state.
+    """
+    exclude = {_SHM_ROOT_NAME}
+    if not (before.wal_checkpointed and after.wal_checkpointed):
+        exclude.add(_WAL_ROOT_NAME)
+    names = (set(before.roots) | set(after.roots)) - exclude
+    return sorted(
+        name for name in names if before.roots.get(name) != after.roots.get(name)
+    )
 
 
 def build_report(
@@ -688,7 +1059,7 @@ def run_corpus(
     runtime_root.mkdir(parents=True, exist_ok=False)
     os.chmod(runtime_root, 0o700)
     verify_default_write_denial(runtime_root, default_home)
-    before = _profile_fingerprint(default_home)
+    run_before_fingerprint = _profile_fingerprint(default_home)
     # Retention lives under the 0700 runtime root, not the lane: each lane is
     # torn down immediately after its run, so anything written inside it is
     # gone before the report is built.
@@ -700,6 +1071,11 @@ def run_corpus(
         for index, scenario in enumerate(scenarios):
             lane = runtime_root / scenario.scenario_id
             lane.mkdir(mode=0o700)
+            # Per-lane fingerprinting (scc-l41): a snapshot immediately before
+            # and after this exact lane, so a mutation is attributable to the
+            # one scenario that caused it instead of only "somewhere in the
+            # 72-lane run".
+            lane_before_fingerprint = _profile_fingerprint(default_home)
             try:
                 result = _run_scenario(
                     scenario,
@@ -719,6 +1095,13 @@ def run_corpus(
                 )
             finally:
                 shutil.rmtree(lane, ignore_errors=False)
+            lane_after_fingerprint = _profile_fingerprint(default_home)
+            result = replace(
+                result,
+                profile_delta=_profile_diff(
+                    lane_before_fingerprint, lane_after_fingerprint
+                ),
+            )
             results.append(result)
             if result.raw_stdout_path or result.raw_stderr_path:
                 retained_lanes += 1
@@ -738,8 +1121,20 @@ def run_corpus(
                 )
                 break
     finally:
-        after = _profile_fingerprint(default_home)
-    unchanged = before == after
+        run_after_fingerprint = _profile_fingerprint(default_home)
+    # default_profile_unchanged stays a single run-level boolean for backward
+    # compatibility (existing consumers key off it directly), but its meaning
+    # is unchanged: True only if no tracked root differed anywhere across the
+    # whole run. It is now derived from the conjunction of every lane's own
+    # before/after delta plus the whole-run bookend snapshots, rather than
+    # only the bookend snapshots, so a mutate-then-revert within a single
+    # lane can no longer cancel out and hide behind a run-level match.
+    run_level_changed_roots = _profile_diff(
+        run_before_fingerprint, run_after_fingerprint
+    )
+    unchanged = not run_level_changed_roots and all(
+        not result.profile_delta for result in results
+    )
     report = build_report(
         results,
         candidate_sha256=candidate_sha256,
@@ -822,7 +1217,7 @@ print(json.dumps({"candidate_discovered": "beads" in names, "candidate_loaded": 
             "candidate_discovered": payload.get("candidate_discovered") is True,
             "candidate_loaded": payload.get("candidate_loaded") is True,
             "load_events": _load_event_count(home),
-            "default_profile_unchanged": before == after,
+            "default_profile_unchanged": not _profile_diff(before, after),
             "default_profile_write_denied": True,
             "default_profile_mutation_by_harness": False,
             "automatic_routing_exercised": False,
@@ -882,6 +1277,19 @@ def _parser() -> argparse.ArgumentParser:
         command.add_argument("--provider", default="openai-codex")
         command.add_argument("--model", default="gpt-5.6-sol")
 
+    issue_token = sub.add_parser(
+        "issue-token",
+        help=(
+            "Mint one fresh, single-use authorization token for a single "
+            "future 'run' invocation. Run this yourself, as a human -- an "
+            "agent must never call it to self-authorize."
+        ),
+    )
+    issue_token.add_argument(
+        "--token-ledger", type=Path, default=DEFAULT_TOKEN_LEDGER_PATH
+    )
+    issue_token.add_argument("--output", type=Path)
+
     run = sub.add_parser("run")
     run.add_argument("--candidate", type=Path, required=True)
     run.add_argument("--candidate-sha256", required=True)
@@ -894,7 +1302,14 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--credentials", type=Path)
     run.add_argument("--provider", default="openai-codex")
     run.add_argument("--model", default="gpt-5.6-sol")
-    run.add_argument("--authorization", required=True)
+    run.add_argument(
+        "--authorization",
+        required=True,
+        help=(
+            "A single-use token minted by 'issue-token', not free-text approval prose."
+        ),
+    )
+    run.add_argument("--token-ledger", type=Path, default=DEFAULT_TOKEN_LEDGER_PATH)
     run.add_argument("--output", type=Path, required=True)
     run.add_argument(
         "--force-full-sweep",
@@ -917,6 +1332,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "plan":
             _write_json(None, approval_request(args.provider, args.model))
             return 0
+        if args.command == "issue-token":
+            token = issue_authorization_token(args.token_ledger)
+            _write_json(
+                args.output,
+                {"token": token, "token_ledger": str(Path(args.token_ledger))},
+            )
+            return 0
         if args.command == "probe":
             payload = probe_actual_hermes_install(
                 candidate=args.candidate,
@@ -927,31 +1349,40 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             _write_json(args.output, payload)
             return 0
-        require_authorization(args.authorization, args.provider, args.model)
-        scenarios = load_corpus(args.corpus, args.design, args.corpus_sha256)
-        payload = run_corpus(
-            scenarios=scenarios,
-            candidate=args.candidate,
-            candidate_sha256=args.candidate_sha256,
-            corpus_sha256=args.corpus_sha256,
-            hermes_source=args.hermes_source,
-            runtime_root=args.runtime_root,
-            default_home=args.default_home,
-            credentials=args.credentials,
-            provider=args.provider,
-            model=args.model,
-            force_full_sweep=args.force_full_sweep,
-        )
-        _write_json(args.output, payload)
-        # Exit codes are a three-way partition, matching the report. An
-        # errored or aborted sweep must never exit 0: with the errored count
-        # split out of "failed", a total provider outage leaves failed == 0,
-        # and reporting that as success is exactly the confusion this change
-        # exists to remove. 4 means "no verdict"; 3 means "a real routing
-        # failure was measured".
-        if payload["errored"] or payload.get("aborted"):
-            return 4
-        return 0 if payload["failed"] == 0 else 3
+        # command == "run": lock the exact --output path first -- a second
+        # invocation racing for the same path is rejected before it ever
+        # touches the token ledger, a preflight check, or a subprocess. Only
+        # once the lock is held do we require and consume a real, single-use
+        # authorization token, before any preflight check or subprocess spawn.
+        lock = acquire_output_lock(args.output)
+        try:
+            require_authorization(args.authorization, args.token_ledger)
+            scenarios = load_corpus(args.corpus, args.design, args.corpus_sha256)
+            payload = run_corpus(
+                scenarios=scenarios,
+                candidate=args.candidate,
+                candidate_sha256=args.candidate_sha256,
+                corpus_sha256=args.corpus_sha256,
+                hermes_source=args.hermes_source,
+                runtime_root=args.runtime_root,
+                default_home=args.default_home,
+                credentials=args.credentials,
+                provider=args.provider,
+                model=args.model,
+                force_full_sweep=args.force_full_sweep,
+            )
+            _write_json(args.output, payload)
+            # Exit codes are a three-way partition, matching the report. An
+            # errored or aborted sweep must never exit 0: with the errored
+            # count split out of "failed", a total provider outage leaves
+            # failed == 0, and reporting that as success is exactly the
+            # confusion this change exists to remove. 4 means "no verdict";
+            # 3 means "a real routing failure was measured".
+            if payload["errored"] or payload.get("aborted"):
+                return 4
+            return 0 if payload["failed"] == 0 else 3
+        finally:
+            lock.release()
     except HarnessError as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 2
