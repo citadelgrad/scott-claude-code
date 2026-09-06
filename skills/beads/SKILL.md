@@ -1,11 +1,11 @@
 ---
 name: beads
 description: >-
-  Use when bd/Beads is explicitly requested, or when trusted repository context
-  says Beads is the issue tracker and work involves nontrivial repository
-  mutation, issue creation/claim/close, blockers or dependencies, tracked-work
-  recovery, durable handoff, or issue-level parallelism. Do not use for
-  unrelated repositories or ephemeral work that does not inspect Beads.
+  Use when bd/Beads is explicitly requested, or trusted repository context designates
+  Beads as the issue tracker for nontrivial tracked work: creating, claiming,
+  implementing, or closing a tracked issue, its dependencies, concurrent or recovering
+  work, review gates before close, or durable handoff. Do not use for unrelated
+  repositories, ephemeral work, or PAS authoring with no real Beads lifecycle.
 license: MIT; see LICENSE.txt and references/sources.md
 compatibility: >-
   Hermes-first. Requires the Go/Dolt bd executable for lifecycle work and Git

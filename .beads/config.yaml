@@ -47,7 +47,6 @@ sync:
     remote: "git+ssh://git@github.com/citadelgrad/scott-cc.git"
 validation:
     on-create: warn
-
 # Multi-repo configuration (experimental - bd-307)
 # Allows hydrating from multiple repositories and routing writes to the correct JSONL
 # repos:
